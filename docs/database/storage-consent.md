@@ -13,11 +13,11 @@ External AI consent is a separate optional choice. This change implements storag
 ## Files and migration
 
 - Service: `apps/api/src/services/consent-service.js`.
-- Migration: `docs/database/migrations/002_storage_consent.up.sql`.
-- Development rollback: `docs/database/migrations/002_storage_consent.down.sql`.
-- Schema verification: `docs/database/migrations/verify-storage-consent.sql`.
+- Migration: `migrations/002_storage_consent.up.sql`.
+- Development rollback: `migrations/002_storage_consent.down.sql`.
+- Schema verification: `scripts/database/verify-storage-consent.sql`.
 
-Apply only after the DAT-02 core migration has created `students`. DAT-02 source is currently in the workspace's `Rord-Mai Context/docs/database/DAT-02/001_core.up.sql`; it was not duplicated by this change. Use psql with error stopping enabled. The up migration defaults existing students to no consent and preserves existing academic data. The down migration destroys consent evidence, so stop writers first and use it only for development rollback.
+Apply only after the DAT-02 core migration has created `students`. The core migration and its rollback are included in `migrations/001_core.up.sql` and `migrations/001_core.down.sql`. The original context copies are preserved. Use psql with error stopping enabled. The up migration defaults existing students to no consent and preserves existing academic data. The down migration destroys consent evidence, so stop writers first and use it only for development rollback.
 
 ## Integration requirements
 
@@ -34,3 +34,4 @@ The context draft passed nine service unit tests and PostgreSQL 18 up/verify/dow
 On 2026-09-21, all 46 tests across four repository test suites passed after integration. Git diff whitespace checks also passed.
 
 Real database service integration, concurrent grant/withdraw/write tests, verified authentication, endpoint integration, and withdrawal/audit-retention decisions remain outstanding. PRV-01 is not complete until actual write paths are guarded and verified. No application database migration was executed by this repository update.
+
