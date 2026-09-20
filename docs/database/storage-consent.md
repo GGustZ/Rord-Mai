@@ -1,0 +1,36 @@
+# PRV-01 storage consent foundation
+
+The migration and consent service are installed in this repository. They are not connected to live routes or the application database yet.
+
+## Flow
+
+Verified LINE identity -> explicit storage acceptance -> validate policy version -> transaction creates student UUID and consent evidence together. Repeated acceptance reuses the same student. Declining creates no student. Declining is not withdrawal of an earlier grant.
+
+For each academic write, `withStorageConsent` locks the verified student's row, checks consent, and runs the supplied callback using the same database client. Failure rolls back. The caller must check resource ownership and await every write. Consent withdrawal must use the same row lock before deleting academic data.
+
+External AI consent is a separate optional choice. This change implements storage consent only; it does not grant or store external AI permission.
+
+## Files and migration
+
+- Service: `apps/api/src/services/consent-service.js`.
+- Migration: `docs/database/migrations/002_storage_consent.up.sql`.
+- Development rollback: `docs/database/migrations/002_storage_consent.down.sql`.
+- Schema verification: `docs/database/migrations/verify-storage-consent.sql`.
+
+Apply only after the DAT-02 core migration has created `students`. DAT-02 source is currently in the workspace's `Rord-Mai Context/docs/database/DAT-02/001_core.up.sql`; it was not duplicated by this change. Use psql with error stopping enabled. The up migration defaults existing students to no consent and preserves existing academic data. The down migration destroys consent evidence, so stop writers first and use it only for development rollback.
+
+## Integration requirements
+
+Construct `createConsentService({ pool, currentPolicyVersion })` with a node-postgres-compatible pool. DAT-11 will supply the database connection; no database driver or production connection is added here. Only verified authentication may supply `identity.lineUserId`, never request-body values or unverified token claims.
+
+Call `grantStorageConsent({ identity, accepted: true, policyVersion })` for an explicit grant. Call `withStorageConsent({ identity }, async ({ client, studentId }) => { ... })` around academic writes. Use the supplied client throughout. The error handler exposes only the recognised consent errors with fixed public messages.
+
+Current section routes still return 501 for valid requests. Connect this service as those routes gain persistence. Future webhook and background writers must use the same guard. Database constraints validate evidence but do not stop direct academic writes from bypassing the service.
+
+## Verification and remaining work
+
+The context draft passed nine service unit tests and PostgreSQL 18 up/verify/down/up/verify on a disposable database. The copied tests run under the repository's Jest suite, with additional error-response tests.
+
+On 2026-09-21, all 46 tests across four repository test suites passed after integration. Git diff whitespace checks also passed.
+
+Real database service integration, concurrent grant/withdraw/write tests, verified authentication, endpoint integration, and withdrawal/audit-retention decisions remain outstanding. PRV-01 is not complete until actual write paths are guarded and verified. No application database migration was executed by this repository update.

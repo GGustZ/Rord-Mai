@@ -18,3 +18,5 @@ Run `npm test` from apps/api. Tests create temporary listeners and do not requir
 GET /health returns 200. POST /api/v1/sections and /api/v1/sections/join validate input and return 501 for valid requests. No student records are stored. Authentication and feature persistence are future work.
 
 The current API-01 specification is docs/api/contract.md. Team review is outstanding. The earlier learning notes in docs/api/README.md are historical and are superseded where they differ from the contract.
+
+The PRV-01 storage-consent migration and service are described in [storage consent](docs/database/storage-consent.md). They provide explicit consent recording and a transaction-scoped write guard; live authentication, database connections and route integration remain future work.

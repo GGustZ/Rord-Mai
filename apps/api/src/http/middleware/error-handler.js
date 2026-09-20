@@ -21,6 +21,19 @@ const errorHandler = (error, _req, res, next) => {
         });
     }
 
+    const consentErrors = {
+        UNAUTHENTICATED: { status: 401, message: 'Verified LINE identity is required.' },
+        EXPLICIT_CONSENT_REQUIRED: { status: 400, message: 'Explicit storage consent is required.' },
+        POLICY_VERSION_OUTDATED: { status: 409, message: 'Accept the current storage policy.' },
+        STORAGE_CONSENT_REQUIRED: { status: 403, message: 'Storage consent is required.' },
+    };
+    const knownError = Object.hasOwn(consentErrors, error.code) ? consentErrors[error.code] : undefined;
+    if (knownError && error.status === knownError.status) {
+        return res.status(knownError.status).json({
+            error: { code: error.code, message: knownError.message },
+        });
+    }
+
     console.error(error);
 
     return res.status(500).json({
