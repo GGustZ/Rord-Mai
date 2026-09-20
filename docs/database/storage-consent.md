@@ -1,6 +1,6 @@
 # PRV-01 storage consent foundation
 
-The migration and consent service are installed in this repository. They are not connected to live routes or the application database yet.
+The migration and consent service are installed in this repository. The developer confirmed migration and verification in the local practice database. Live route integration and application database wiring remain pending.
 
 ## Flow
 
@@ -21,7 +21,7 @@ Apply only after the DAT-02 core migration has created `students`. The core migr
 
 ## Integration requirements
 
-Construct `createConsentService({ pool, currentPolicyVersion })` with a node-postgres-compatible pool. DAT-11 will supply the database connection; no database driver or production connection is added here. Only verified authentication may supply `identity.lineUserId`, never request-body values or unverified token claims.
+Construct `createConsentService({ pool, currentPolicyVersion })` with a node-postgres-compatible pool. The API package includes `pg` for the manual database checks; DAT-11 will supply application database wiring. No production connection is configured here. Only verified authentication may supply `identity.lineUserId`, never request-body values or unverified token claims.
 
 Call `grantStorageConsent({ identity, accepted: true, policyVersion })` for an explicit grant. Call `withStorageConsent({ identity }, async ({ client, studentId }) => { ... })` around academic writes. Use the supplied client throughout. The error handler exposes only the recognised consent errors with fixed public messages.
 
@@ -33,5 +33,13 @@ The context draft passed nine service unit tests and PostgreSQL 18 up/verify/dow
 
 On 2026-09-21, all 46 tests across four repository test suites passed after integration. Git diff whitespace checks also passed.
 
-Real database service integration, concurrent grant/withdraw/write tests, verified authentication, endpoint integration, and withdrawal/audit-retention decisions remain outstanding. PRV-01 is not complete until actual write paths are guarded and verified. No application database migration was executed by this repository update.
+The developer subsequently reported successful migration and schema verification in `rord_mai_dat02_practice`, plus 11 passing checks across these standalone scripts:
+
+| Script under `apps/api/scripts/database/` | Command from `apps/api` | Coverage |
+| --- | --- | --- |
+| `consent-db-check.js` | `npm run check:consent:grant` | Four checks: decline, old policy, grant persistence, repeated grant |
+| `consent-write-check.js` | `npm run check:consent:write` | Five checks: missing identity/student/consent, commit, rollback |
+| `consent-race-check.js` | `npm run check:consent:race` | Two checks: writer blocks behind withdrawal, then rejects withdrawn consent |
+
+These are user-reported database execution results, not an automated Jest integration suite. The race script simulates only consent-state withdrawal. Writer-first concurrency, verified authentication, endpoint integration, and withdrawal/audit-retention decisions remain outstanding. PRV-01 is In progress until actual write paths are guarded and verified. Folder reorganization does not execute migrations or rerun these database checks.
 
