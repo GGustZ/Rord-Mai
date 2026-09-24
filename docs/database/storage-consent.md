@@ -42,4 +42,3 @@ The developer subsequently reported successful migration and schema verification
 | `consent-race-check.js` | `npm run check:consent:race` | Two checks: writer blocks behind withdrawal, then rejects withdrawn consent |
 
 These are user-reported database execution results, not an automated Jest integration suite. The race script simulates only consent-state withdrawal. Writer-first concurrency, verified authentication, endpoint integration, and withdrawal/audit-retention decisions remain outstanding. PRV-01 is In progress until actual write paths are guarded and verified. Folder reorganization does not execute migrations or rerun these database checks.
-

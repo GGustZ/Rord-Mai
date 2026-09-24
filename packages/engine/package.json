@@ -1,0 +1,9 @@
+{
+  "name": "@rord-mai/engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node ../../apps/api/node_modules/jest/bin/jest.js --runInBand"
+  }
+}

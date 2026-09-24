@@ -6,9 +6,9 @@ Read the [folder rationale and file-by-file guide](docs/project-guide.md) first,
 
 ## Run the API
 
-From apps/api, run `npm ci`, then `npm start`. For automatic restart use `npm run dev`. Node.js 20 or newer is required. Default port is 3000; set the PORT environment variable to change it. This server does not load .env files automatically.
+Use Node.js 24 and PostgreSQL 18. Follow [setup and deployment](docs/development/setup.md) for a fresh database, LINE configuration and the React build. From the repository root, `npm start` loads `.env` and starts Express after migrations succeed. Default port is 3000.
 
-Run `npm test` from apps/api. Tests create temporary listeners and do not require the development server or a database.
+From the repository root, `npm run check` runs ESLint, API and engine tests, and the React production build. `npm run test:integration` requires a disposable `rordmai_test` PostgreSQL database. Browser tests are separate and use controlled LINE responses.
 
 ## Read the code
 
@@ -19,18 +19,20 @@ Run `npm test` from apps/api. Tests create temporary listeners and do not requir
 5. apps/api/src/lib/validate-create-section.js checks plain input without network or database access.
 6. apps/api/tests contains regression tests for these behaviors.
 
-GET /health returns 200. POST /api/v1/sections and /api/v1/sections/join validate input and return 501 for valid requests. No student records are stored. Authentication and feature persistence are future work.
+GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent read/grant, own enrolment listing and confirmed deletion work with PostgreSQL. Section create/join still return 501 for authenticated valid requests. Course and score UI integration are later stages.
 
 The current API-01 specification is docs/api/contract.md. Team review is outstanding. The earlier learning notes in docs/api/README.md are historical and are superseded where they differ from the contract.
 
-The PRV-01 storage-consent migration and service are described in [storage consent](docs/database/storage-consent.md). They provide explicit consent recording and a transaction-scoped write guard. Practice database checks have passed as reported by the developer; live authentication, application database wiring and route integration remain future work.
+The earlier PRV-01 foundation is described in [storage consent](docs/database/storage-consent.md). The current lifecycle and teammate interfaces are documented in [integration interfaces](docs/development/interfaces.md). Migration 003 adds deletion-linked private tables and nullable shared creator/revision attribution. Live LINE, cloud deployment and repository protection still need external verification.
 
 ## Repository layout
 
 | Location | Purpose |
 | --- | --- |
 | `apps/api/src/` | API application code |
-| `apps/api/tests/` | Jest regression tests, no database required |
+| `apps/api/tests/` | Jest unit/HTTP tests and separate PostgreSQL integration tests |
+| `apps/web/` | React/LIFF frontend and browser tests |
+| `packages/engine/` | Pure calculation core and Jest tests |
 | `apps/api/scripts/database/` | Manual Node.js database checks |
 | `migrations/` | Canonical SQL migrations and development rollbacks |
 | `scripts/database/` | SQL schema verification scripts |

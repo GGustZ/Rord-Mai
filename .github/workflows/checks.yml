@@ -1,0 +1,40 @@
+name: Checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: rordmai_test
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: rordmai_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rordmai_test -d rordmai_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://rordmai_test:test-only@localhost:5432/rordmai_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+      - run: npm ci --prefix apps/api
+      - run: npm ci --prefix apps/web
+      - run: npm run check
+      - run: npm run test:integration
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm --prefix apps/web run test:browser
+      - run: docker build -t rord-mai:check .

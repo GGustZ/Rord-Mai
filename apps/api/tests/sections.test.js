@@ -1,5 +1,4 @@
-const request = require('supertest');
-const { createApp } = require('../src/app');
+const { request, createApp } = require('./helpers/authenticated-app');
 
 describe('POST /api/v1/sections/join', () => {
     let app;

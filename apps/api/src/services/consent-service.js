@@ -95,7 +95,30 @@ const createConsentService = ({ pool, currentPolicyVersion }) => {
         });
     };
 
-    return { grantStorageConsent, withStorageConsent };
+    const getConsent = async ({ identity }) => {
+        const lineUserId = requireIdentity(identity);
+        const { rows } = await pool.query(
+            'SELECT storage_consent, storage_policy_version, storage_consented_at FROM students WHERE line_user_id = $1',
+            [lineUserId]);
+        const row = rows[0];
+        return { storage: row?.storage_consent === true, crossBorderExplanation: false,
+            policyVersion: currentPolicyVersion, acceptedPolicyVersion: row?.storage_policy_version ?? null,
+            updatedAt: row?.storage_consented_at ?? null };
+    };
+
+    const deleteData = async ({ identity }) => {
+        const lineUserId = requireIdentity(identity);
+        return withTransaction(pool, async (client) => {
+            const { rows } = await client.query(
+                'SELECT id FROM students WHERE line_user_id = $1 FOR UPDATE', [lineUserId]);
+            if (!rows[0]) return;
+            // Foreign keys cascade private records and clear shared creator/revision attribution.
+            // Shared structures remain available to classmates. No identity audit survives deletion.
+            await client.query('DELETE FROM students WHERE id = $1', [rows[0].id]);
+        });
+    };
+
+    return { grantStorageConsent, withStorageConsent, getConsent, deleteData };
 };
 
-module.exports = { createConsentService };
+module.exports = { createConsentService, withTransaction };

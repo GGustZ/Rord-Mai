@@ -1,12 +1,12 @@
 # API-01: REST contract v1
 
-Status: Written for team review. Agreement by all three members is still required by the tracker. This contract specifies future behavior; only health, create-section validation, and join validation currently run. Valid create/join requests return 501 NOT_IMPLEMENTED. No authentication, storage, OCR, or calculation is implemented by this skeleton.
+Status (24 September 2026): identity verification, consent grant/read/confirmed deletion, and own enrolment listing are implemented. Real LINE account verification remains a live integration gate. Section create/join remain 501 placeholders. Calculation code exists behind an adapter but is not connected to persisted section routes yet. Other endpoints remain future behaviour. See docs/development/interfaces.md for the current integration handoff.
 
 ## Transport and identity
 
 Base path: /api/v1. HTTPS is required outside local development. JSON bodies use Content-Type: application/json and are limited to 100 KiB. JSON primitives and arrays are syntactically valid but invalid for object request schemas. Unknown input fields are rejected. No implicit conversion of numeric strings.
 
-Future protected requests carry Authorization: Bearer <LINE access token>. The backend must verify the token and intended LINE channel before deriving identity. Never accept student identity from body fields. All application routes below require that identity, including consent routes. GET /health is public. CORS is not authentication. The LINE webhook uses separate signature verification and is outside this REST contract.
+Protected requests carry Authorization: Bearer <LIFF ID token>. The backend verifies the raw token through LINE's ID-token endpoint for the expected Login channel before deriving identity. Never accept student identity from body fields or a decoded client profile. All application routes below require that identity, including consent routes. GET /health, /ready and /api/config are public. CORS is not authentication. The LINE webhook uses separate signature verification and is outside this REST contract.
 
 Use UUID strings for internal IDs. Dates are YYYY-MM-DD calendar dates in Asia/Bangkok; timestamps are UTC ISO 8601. The deadline model does not encode an exact cutoff time. All numbers must be finite. Missing fields differ from explicit null.
 
@@ -25,7 +25,7 @@ Common failures: 400 INVALID_JSON or VALIDATION_ERROR; 401 UNAUTHENTICATED; 403 
 - Enrollment: id, sectionId, targetGrade (A|B+|B|C+|C|D+|D|null), repeat (null or {previousGradePoint: 0..4}). Repeat grade points must belong to the engine's agreed grade-point scale. Return the same fields on reads; no student identifier is necessary.
 - Score: componentId, score (0..component.maximumScore), updatedAt. Absence of a record means unrecorded; zero is a recorded zero. One score per enrollment/component.
 - Attendance: componentId, attended (nonnegative integer), totalSessions (positive integer), updatedAt; attended <= totalSessions. The component must be explicitly selected. Attendance and raw-score entry are mutually exclusive sources for that component; replacing one with the other requires explicit deletion first.
-- Consent: storage, crossBorderExplanation (booleans), policyVersion (nonempty string), updatedAt (timestamp|null). No academic data may be persisted without storage consent. Declining cross-border consent preserves template functionality.
+- Consent: storage, crossBorderExplanation (booleans), policyVersion (current policy string), acceptedPolicyVersion (string|null), updatedAt (timestamp|null). No academic data may be persisted without storage consent. External explanation consent remains false while that feature is disabled.
 - Page<T>: {items:T[], nextCursor:string|null}. List query: limit integer 1..100, default 20; optional opaque cursor. Stable order by creation time and ID. Invalid cursor returns 400.
 
 ## Endpoints
@@ -36,10 +36,10 @@ All paths below are relative to /api/v1, except /health. Empty request means no 
 |---|---|---|---|
 | GET /health (unprefixed) | Empty | 200 {status:"ok",service:"rord-mai-api"} | Checks HTTP process only |
 | GET /consents | Empty | 200 Consent; absent consent returns false flags and updatedAt:null | 401 |
-| PUT /consents | {storage:boolean,crossBorderExplanation:boolean,policyVersion:string} | 200 Consent | 409 POLICY_VERSION_OUTDATED; storage:false requires crossBorderExplanation:false |
+| PUT /consents | {storage:boolean,crossBorderExplanation:boolean,policyVersion:string,confirmDeletion?:boolean} | 200 Consent | 409 POLICY_VERSION_OUTDATED; storage:false requires confirmDeletion:true and crossBorderExplanation:false; external consent true returns FEATURE_UNAVAILABLE |
 | GET /me/profile | Empty | 200 AcademicProfile | 404 if absent |
 | PUT /me/profile | AcademicProfile | 200 AcademicProfile | 403 without storage consent |
-| DELETE /me/data | Empty | 204, idempotent | Deletes academic data and consent state; subsequent access requires fresh consent |
+| DELETE /me/data | {confirmDeletion:true} | 204, idempotent | Deletes academic data and consent state; subsequent access requires fresh consent; absent confirmation returns 400 |
 | POST /sections | SectionInput | 201 {section:Section,enrollment:Enrollment}; Location points to /api/v1/sections/{id} | 403; creates creator enrollment atomically |
 | POST /sections/join | {joinCode:string}; trim and uppercase, six ASCII alphanumerics | 201 Enrollment | 404 SECTION_NOT_FOUND; 409 ALREADY_ENROLLED |
 | GET /sections/{sectionId} | UUID path parameter | 200 Section | Only section members may read |
@@ -56,9 +56,9 @@ All paths below are relative to /api/v1, except /health. Empty request means no 
 | POST /enrollments/{enrollmentId}/explanation | {kind:"summary"|"target"|"withdrawal"}; withdrawal also requires scenarios; target requires saved target | 200 {text:string,source:"template"|"llm"} | 409 TARGET_REQUIRED or PROFILE_REQUIRED; invalid LLM output falls back to template |
 | POST /ocr/syllabus | multipart field image, one JPEG/PNG up to 5 MiB; verify decoded format and cap decoded pixels | 200 OcrDraft | 422 EXTRACTION_FAILED; 503 OCR_UNAVAILABLE |
 
-Section creation automatically enrolls its creator. Multiple user-created sections for the same course/semester are permitted; courseCode alone is not a unique key. Shared structures are immutable in v1 to avoid changing existing students' score meanings. Corrections require a new section and explicit re-entry; no silent migration.
+Section creation automatically enrolls its creator. Multiple user-created sections for the same course/semester are permitted; courseCode alone is not a unique key. Planned PATCH /sections/{sectionId}/grading-structure is creator-only and accepts expectedRevision plus every existing component ID and corrected weightPercent. Total must be exactly 100 in integer hundredths; stale revisions return 409. Raw scores and component IDs remain unchanged. Adding/removing components, changing maximum marks or grading mode is excluded from this endpoint. Legacy sections with no creator remain read-only. This endpoint is scheduled for 25 September and is not implemented by the lifecycle migration alone.
 
-Revoking storage consent through PUT /consents performs the same academic-data deletion as DELETE /me/data and returns false flags without retaining an academic profile. The implementation must resolve retention of consent audit evidence with the project's privacy policy before persistence work. Deletion removes student-linked scores, enrollments, profile, and private state. Shared section structure used by others remains without creator attribution; orphan sections can be deleted. An LLM call never includes identity, section IDs, or individual component scores. OCR runs locally and discards source images after processing. OCR output is only a draft; user confirmation sends the regular POST /sections request.
+Confirmed storage withdrawal through PUT /consents performs the same deletion as DELETE /me/data. The demo retains no identifiable consent audit after deletion. Student-linked scores, enrolments, profiles, attendance, conversation state and pending private jobs are deleted. Shared structures remain without creator or revision-actor attribution, with no automatic ownership transfer. Initial decline makes no API write. All academic writers and deletion lock the same student row. Future explanation payloads exclude identity, section IDs and raw scores. Future OCR produces a draft only; manual confirmation uses regular section creation. Running OCR inside an overseas container does not satisfy the original Thailand-only deployment requirement.
 
 ## Calculation result definitions
 
@@ -75,5 +75,5 @@ OcrDraft = {components:ComponentInput[], warnings:string[], requiresConfirmation
 
 ## Responsibility and completion
 
-API-01: this written contract is ready for review, not yet team-approved. Conventions about years, semester 3, integer credits, 30 components, immutable sections, and creator enrollment are explicit pilot decisions to review.
+API-01: conventions about years, semester 3, integer credits, 30 components and creator enrollment are explicit pilot decisions. Creator weight revision and confirmed deletion supersede the earlier immutable-structure and empty-deletion-request proposals. Team reconciliation remains required.
 API-02: HTTP application/server separation, routing, JSON parsing, create/join validation, consistent errors, configurable port, and regression tests. Future feature implementation belongs to API-03 onward, data migrations to DAT-02, identity integration to LINE work, and CI to INF-05. Do not mark those tasks done from passing skeleton tests.

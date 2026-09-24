@@ -1,5 +1,4 @@
-const request = require('supertest');
-const { createApp } = require('../src/app');
+const { request, createApp } = require('./helpers/authenticated-app');
 const { validateCreateSection } = require('../src/lib/validate-create-section');
 
 const fixture = () => ({ courseCode: ' EN123 ', courseName: 'Example', sectionNumber: '1', academicYear: 2026, semester: 1, credits: 3, gradingMode: 'criterion', withdrawalDeadline: '2026-10-30', gradeThresholds: { A: 80, 'B+': 75, B: 70, 'C+': 65, C: 60, 'D+': 55, D: 50 }, components: [{ name: 'Work', weightPercent: 60, maximumScore: 120 }, { name: 'Final', weightPercent: 40, maximumScore: 80 }] });

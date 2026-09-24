@@ -120,7 +120,7 @@ See [the case catalogue](testing/test-cases.md) for individual scenarios and exp
 | `docs/database/diagrams/ERD.drawio` | Editable diagrams.net source for the entity-relationship diagram. Update this source when maintaining the diagram. |
 | `docs/database/diagrams/ERD.png` | Image export of the ER diagram for viewing and sharing. Regenerate from the editable source after diagram changes; the image itself is not an executable schema. |
 
-Outside the repository, `Group Project/.$ERD.drawio.bkp` is a retained diagram-editor backup. It is not runtime code and is not included in this repository's commits. Its redundancy has not been established, so it was not deleted.
+Outside the repository, `Rord-Mai Project/Context/.$ERD.drawio.bkp` is a retained diagram-editor backup. It is not runtime code and is not included in this repository's commits. Its redundancy has not been established, so it was not deleted.
 
 ## How to maintain this organization
 

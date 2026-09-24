@@ -27,6 +27,8 @@ const errorHandler = (error, _req, res, next) => {
         POLICY_VERSION_OUTDATED: { status: 409, message: 'Accept the current storage policy.' },
         STORAGE_CONSENT_REQUIRED: { status: 403, message: 'Storage consent is required.' },
     };
+    const { messages } = require('../../lib/errors');
+    for (const [code, [status, message]] of Object.entries(messages)) consentErrors[code] = { status, message };
     const knownError = Object.hasOwn(consentErrors, error.code) ? consentErrors[error.code] : undefined;
     if (knownError && error.status === knownError.status) {
         return res.status(knownError.status).json({
@@ -34,7 +36,8 @@ const errorHandler = (error, _req, res, next) => {
         });
     }
 
-    console.error(error);
+    // Never emit PostgreSQL detail, request bodies or provider errors containing personal data.
+    console.error('Unhandled request error.');
 
     return res.status(500).json({
         error: {

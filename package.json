@@ -1,0 +1,14 @@
+{
+  "name": "rord-mai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "npm --prefix apps/api test && npm --prefix packages/engine test",
+    "test:integration": "npm --prefix apps/api run test:integration",
+    "build": "npm --prefix apps/web run build",
+    "lint": "node apps/api/node_modules/eslint/bin/eslint.js apps/api/src apps/api/tests packages/engine scripts --max-warnings 0",
+    "check": "npm run lint && npm test && npm run build",
+    "start": "node --env-file=.env apps/api/src/server.js",
+    "migrate": "node --env-file=.env apps/api/src/db/migrate.js"
+  }
+}
