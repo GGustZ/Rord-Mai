@@ -9,8 +9,7 @@ Teammates must reconcile these files before merging parallel work.
 React in apps/web, real @line/liff SDK, same-origin REST calls.
 LIFF obtains the raw ID token; Express verifies it with LINE for the configured Login channel.
 The browser never supplies a student UUID and never saves the token in localStorage.
-Implemented screens: consent, own enrolment empty/list state, confirmed withdrawal and deletion.
-Course creation, scores and Rich Menu are later daily stages.
+Implemented screens: consent, course list, create/join, varied grading structures, score/attendance entry and correction, target calculation, shared weight correction, and confirmed deletion. Rich Menu and LINE chat remain pending.
 
 GET /api/config exposes only liffId and policyVersion.
 GET /api/v1/consents does not create a student.
@@ -28,7 +27,7 @@ Input gradingMode is criterion or norm. Criterion requires the seven ordered thr
 Adapter exports courseSummary(input) and targetCalculation(input,targetGrade).
 No partial-score letter projection is invented: criterion projectedGrade stays null until all components are recorded, with INCOMPLETE_ASSESSMENTS.
 Norm always returns NORM_REFERENCED and no letter grade.
-The API routes must pass persisted, consistently read data when calculation integration begins.
+The API routes now pass persisted data under a student lock and shared section lock. Weight updates take an exclusive section lock. Calculation responses carry structureRevision, and the frontend refuses to display mismatched detail/summary revisions.
 This real small engine is temporary shared implementation, not yet Praweena's approved final engine.
 
 ## Repository and concurrency
@@ -40,7 +39,6 @@ listOwnedEnrollments uses creation-time/UUID keyset pagination with an opaque cu
 requireCurrentJob checks original student UUID and unexpired job existence. Workers must not revive stale work by resolving only the LINE user ID after a fresh consent grant.
 
 Migration 003 adds deletion-linked private tables and nullable shared creator/revision attribution.
-It does not implement profile, attendance, chat processing or grading corrections by itself.
+Migration 003 does not implement features by itself. The academic service now implements attendance and grading corrections. Profile and chat processing remain pending. Migration 004 adds component order and an enrolment pagination index.
 Foreign keys cascade private data on student deletion. Shared sections remain, with creator and revision actors cleared.
 No identifiable deletion audit remains. Future writers and tables must extend deletion tests before becoming available.
-

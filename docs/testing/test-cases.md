@@ -82,7 +82,7 @@ Valid fixture: criterion grading, weights 60 and 40, ordered thresholds, and a r
 | CS-15 | Validate string `hello` | Validation fails. |
 | CS-16 | Validate an empty object | Validation fails. |
 | CS-17 | Norm grading, null thresholds, weights 33.33/33.33/33.34 | Validation succeeds. |
-| CS-18 | POST valid fixture, empty object, then text to section creation | Respectively 501; 400 with nonempty error details; 415. Three requests in one case. |
+| CS-18 | POST valid fixture, empty object, then text to section creation | Respectively 201 through the controlled service adapter; 400 with nonempty error details; 415. Real persistence is tested separately against PostgreSQL. |
 | CS-19 | GET health and an unknown path | Health body has `data.status = ok`; unknown path has `ROUTE_NOT_FOUND`. This case does not explicitly assert status codes. |
 | CS-20 | Throw a private error in a temporary Express route | 500 and `INTERNAL_SERVER_ERROR`; response excludes private message. |
 
@@ -92,8 +92,8 @@ Each case creates a fresh app and sends a POST to `/api/v1/sections/join`.
 
 | ID | Input/action | Asserted result |
 | --- | --- | --- |
-| JOIN-01 | `ABC123` | 501 and `NOT_IMPLEMENTED`. |
-| JOIN-02 | ` abc123 ` | 501 and `NOT_IMPLEMENTED`; proves acceptance, not a direct assertion of normalized `req.validated`. |
+| JOIN-01 | `ABC123` | 201 through the controlled service adapter, normalized code asserted. |
+| JOIN-02 | ` abc123 ` | 201 through the controlled service adapter, normalized ABC123 asserted. |
 | JOIN-03 | Missing code | 400 and `VALIDATION_ERROR`. |
 | JOIN-04 | Numeric code 123456 | 400 and `VALIDATION_ERROR`. |
 | JOIN-05 | Short code `AB` | 400 and `VALIDATION_ERROR`. |
@@ -185,7 +185,7 @@ Expected final consent SQL message: `Storage consent schema checks passed; test 
 
 During the preceding folder cleanup on 2026-09-21, the assistant ran all 46 Jest cases successfully. The developer supplied successful practice migration/schema output and all 11 Node database PASS messages earlier in this conversation. The database scripts were not rerun during cleanup or this documentation work. These are dated execution results, not a guarantee that every future checkout passes.
 
-PRV-01 remains In progress. Current create/join routes intentionally return 501 after validation. Their placeholder tests will need to change when persistence is implemented; a passing 501 test is not proof of successful creation/enrollment.
+24 September update: create/join now persist through the guarded academic service. The old placeholder assertions have been replaced. The PostgreSQL suite covers consent rejection for every implemented academic writer, transactions, private ownership, shared corrections and deletion. PRV-01 still needs the future chat writers and live release verification before its full presentation gate is complete. See docs/development/interfaces.md for current behaviour.
 
 Still unverified or unimplemented:
 

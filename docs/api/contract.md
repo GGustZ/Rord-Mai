@@ -1,6 +1,6 @@
 # API-01: REST contract v1
 
-Status (24 September 2026): identity verification, consent grant/read/confirmed deletion, and own enrolment listing are implemented. Real LINE account verification remains a live integration gate. Section create/join remain 501 placeholders. Calculation code exists behind an adapter but is not connected to persisted section routes yet. Other endpoints remain future behaviour. See docs/development/interfaces.md for the current integration handoff.
+Status (24 September 2026, continuation): identity, consent, deletion, section create/join/read, creator weight correction, own enrolment read/list/target update, score/attendance CRUD, and persisted summary/target calculations are implemented. Real LINE account verification remains a live gate. Profile, repeat-course updates, GPAX, chat, explanation and OCR endpoints remain future behaviour. See docs/development/interfaces.md for the current handoff.
 
 ## Transport and identity
 
@@ -20,7 +20,7 @@ Common failures: 400 INVALID_JSON or VALIDATION_ERROR; 401 UNAUTHENTICATED; 403 
 - SectionInput: courseCode (trimmed string 1..30), courseName (1..200), sectionNumber (1..20), academicYear (Gregorian integer 1..9999), semester (1,2,3), credits (positive safe integer), gradingMode (criterion|norm), withdrawalDeadline (real date), gradeThresholds, components (1..30).
 - ComponentInput: name (trimmed 1..100), weightPercent (>0..100, at most two decimal places), maximumScore (>0). Weights total 100 using integer hundredths. Component: ComponentInput plus id UUID.
 - gradeThresholds: criterion requires exactly A,B+,B,C+,C,D+,D numeric minima in [0,100], strictly decreasing; values below D yield F. Norm requires null. These are supplied course rules, not universal university thresholds.
-- Section: SectionInput with components replaced by Component[], plus id and joinCode (six uppercase ASCII letters/digits). Server generates IDs and codes. Handle code collisions by retrying; codes are not credentials.
+- Section: SectionInput with components replaced by Component[], plus id, joinCode (six uppercase ASCII letters/digits), structureRevision (positive integer), and canEdit (whether the verified caller is the creator). Server generates IDs and codes. Code collisions retry at most five times; exhaustion returns 503 JOIN_CODE_UNAVAILABLE. Codes are not credentials.
 - AcademicProfile: currentGpa (0..4), creditsEarned (nonnegative safe integer), academicYear, semester. If creditsEarned is zero, currentGpa must be zero. Inputs are self-reported.
 - Enrollment: id, sectionId, targetGrade (A|B+|B|C+|C|D+|D|null), repeat (null or {previousGradePoint: 0..4}). Repeat grade points must belong to the engine's agreed grade-point scale. Return the same fields on reads; no student identifier is necessary.
 - Score: componentId, score (0..component.maximumScore), updatedAt. Absence of a record means unrecorded; zero is a recorded zero. One score per enrollment/component.
@@ -45,7 +45,7 @@ All paths below are relative to /api/v1, except /health. Empty request means no 
 | GET /sections/{sectionId} | UUID path parameter | 200 Section | Only section members may read |
 | GET /enrollments | Optional limit,cursor | 200 Page<Enrollment> | Own enrollments only |
 | GET /enrollments/{enrollmentId} | UUID path parameter | 200 {enrollment:Enrollment,section:Section,scores:Score[],attendance:Attendance[]} | Ownership enforced |
-| PATCH /enrollments/{enrollmentId} | Nonempty subset of {targetGrade,repeat} | 200 Enrollment | 422 NORM_GRADE_UNAVAILABLE if non-null target for norm grading |
+| PATCH /enrollments/{enrollmentId} | {targetGrade}; repeat update deferred | 200 Enrollment | 422 NORM_GRADE_UNAVAILABLE if non-null target for norm grading |
 | PUT /enrollments/{enrollmentId}/scores/{componentId} | {score:number} | 200 Score (idempotent upsert) | 400 if component outside section or score out of range; 409 ATTENDANCE_SOURCE_EXISTS |
 | DELETE /enrollments/{enrollmentId}/scores/{componentId} | Empty | 204; resets to unrecorded | Validate ownership and component membership |
 | PUT /enrollments/{enrollmentId}/attendance/{componentId} | {attended:integer,totalSessions:integer} | 200 Attendance | 409 SCORE_SOURCE_EXISTS |
@@ -56,7 +56,7 @@ All paths below are relative to /api/v1, except /health. Empty request means no 
 | POST /enrollments/{enrollmentId}/explanation | {kind:"summary"|"target"|"withdrawal"}; withdrawal also requires scenarios; target requires saved target | 200 {text:string,source:"template"|"llm"} | 409 TARGET_REQUIRED or PROFILE_REQUIRED; invalid LLM output falls back to template |
 | POST /ocr/syllabus | multipart field image, one JPEG/PNG up to 5 MiB; verify decoded format and cap decoded pixels | 200 OcrDraft | 422 EXTRACTION_FAILED; 503 OCR_UNAVAILABLE |
 
-Section creation automatically enrolls its creator. Multiple user-created sections for the same course/semester are permitted; courseCode alone is not a unique key. Planned PATCH /sections/{sectionId}/grading-structure is creator-only and accepts expectedRevision plus every existing component ID and corrected weightPercent. Total must be exactly 100 in integer hundredths; stale revisions return 409. Raw scores and component IDs remain unchanged. Adding/removing components, changing maximum marks or grading mode is excluded from this endpoint. Legacy sections with no creator remain read-only. This endpoint is scheduled for 25 September and is not implemented by the lifecycle migration alone.
+Section creation automatically enrolls its creator. Multiple user-created sections for the same course/semester are permitted; courseCode alone is not a unique key. PATCH /sections/{sectionId}/grading-structure is creator-only and accepts {expectedRevision,components:[{id,weightPercent}]} containing every existing component exactly once. Total must be exactly 100 in integer hundredths; stale revisions return 409. Success returns the updated Section including structureRevision. Raw scores and component IDs remain unchanged. Adding/removing components, changing maximum marks or grading mode is excluded. Legacy sections with no creator remain read-only. Summary and target responses also include structureRevision.
 
 Confirmed storage withdrawal through PUT /consents performs the same deletion as DELETE /me/data. The demo retains no identifiable consent audit after deletion. Student-linked scores, enrolments, profiles, attendance, conversation state and pending private jobs are deleted. Shared structures remain without creator or revision-actor attribution, with no automatic ownership transfer. Initial decline makes no API write. All academic writers and deletion lock the same student row. Future explanation payloads exclude identity, section IDs and raw scores. Future OCR produces a draft only; manual confirmation uses regular section creation. Running OCR inside an overseas container does not satisfy the original Thailand-only deployment requirement.
 

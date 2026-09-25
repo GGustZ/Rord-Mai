@@ -35,7 +35,7 @@ server.js starts the listener
   -> app.js parses JSON and selects the router
   -> section-routes.js selects create or join
   -> validation middleware checks the request
-  -> valid input currently receives 501 NOT_IMPLEMENTED
+  -> authenticated, consented input reaches transactional section creation/join
 
 Parsing errors or unexpected failures -> error-handler.js
 ```
@@ -70,7 +70,7 @@ Paths below are relative to the repository root. This covers all project-owned f
 | --- | --- |
 | `apps/api/src/server.js` | Creates the app, validates `PORT` (default 3000), opens the listener, reports server errors, and handles termination with a shutdown deadline. |
 | `apps/api/src/app.js` | Builds and returns the Express app without opening the production listener. Disables the identifying header, configures a 100 KiB JSON limit, adds health and section routes, and installs 404/error handling. This separation lets Supertest create app instances. |
-| `apps/api/src/http/routes/section-routes.js` | Registers create-section and join-section POST handlers. Runs their validation middleware and currently returns 501 for valid requests; it does not save data. |
+| `apps/api/src/http/routes/academic-routes.js` | Connects validated section create/join, grading revisions, score/attendance, targets and calculation routes to the consent-guarded academic service. Replaces the former section-routes.js skeleton. |
 | `apps/api/src/http/middleware/validate-create-section.js` | Requires JSON, calls the plain section validator, returns 400 with field details on failure, or stores normalized data in `req.validated` and continues. |
 | `apps/api/src/http/middleware/validate-join-section.js` | Requires a JSON object containing only a string `joinCode`; trims and uppercases it, enforces six ASCII letters/digits, and stores the validated value. |
 | `apps/api/src/http/middleware/error-handler.js` | Converts malformed JSON, oversized bodies, and recognized consent errors into public error responses. Unexpected errors are logged and become a generic 500; already-sent responses are delegated to Express. |

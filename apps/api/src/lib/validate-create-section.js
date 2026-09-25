@@ -25,7 +25,7 @@ const validateCreateSection = (input) => {
   data.sectionNumber = text(input.sectionNumber, 20, 'sectionNumber');
   if (!Number.isInteger(input.academicYear) || input.academicYear < 1 || input.academicYear > 9999) add('academicYear', 'Expected a Gregorian year from 1 to 9999.');
   if (![1, 2, 3].includes(input.semester)) add('semester', 'Expected 1, 2, or 3.');
-  if (!Number.isSafeInteger(input.credits) || input.credits <= 0) add('credits', 'Expected a positive integer.');
+  if (!Number.isSafeInteger(input.credits) || input.credits <= 0 || input.credits > 2147483647) add('credits', 'Expected a positive 32-bit integer.');
   if (!['criterion', 'norm'].includes(input.gradingMode)) add('gradingMode', 'Expected criterion or norm.');
   const date = input.withdrawalDeadline;
   const timestamp = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(`${date}T00:00:00Z`) : NaN;

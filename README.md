@@ -14,12 +14,12 @@ From the repository root, `npm run check` runs ESLint, API and engine tests, and
 
 1. apps/api/src/server.js starts the process and handles shutdown.
 2. apps/api/src/app.js configures parsing, routes, fallback, and errors.
-3. apps/api/src/http/routes/section-routes.js maps section URLs to middleware.
+3. apps/api/src/http/routes/academic-routes.js connects sections, scores, attendance and calculations to the shared service.
 4. apps/api/src/http/middleware/validate-create-section.js translates validation results to HTTP.
 5. apps/api/src/lib/validate-create-section.js checks plain input without network or database access.
 6. apps/api/tests contains regression tests for these behaviors.
 
-GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent read/grant, own enrolment listing and confirmed deletion work with PostgreSQL. Section create/join still return 501 for authenticated valid requests. Course and score UI integration are later stages.
+GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent, section create/join/read, creator weight revisions, own enrolments, scores/attendance, targets, persisted calculations and confirmed deletion work with PostgreSQL. React connects these flows. LINE chat and Rich Menu integration remain pending.
 
 The current API-01 specification is docs/api/contract.md. Team review is outstanding. The earlier learning notes in docs/api/README.md are historical and are superseded where they differ from the contract.
 

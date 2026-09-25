@@ -1,12 +1,13 @@
 const express = require('express');
 const { errorHandler } = require('./http/middleware/error-handler');
-const { sectionRouter } = require('./http/routes/section-routes');
 const path = require('node:path');
 const { authenticate } = require('./adapters/line-identity');
 const { createPrivacyRouter } = require('./http/routes/privacy-routes');
 const { fail } = require('./lib/errors');
+const { createAcademicService } = require('./services/academic-service');
+const { createAcademicRouter } = require('./http/routes/academic-routes');
 
-const createApp = ({ verifyIdentity, consentService, pool, publicConfig, webRoot } = {}) => {
+const createApp = ({ verifyIdentity, consentService, academicService, pool, publicConfig, webRoot } = {}) => {
     const app = express();
 
     app.disable('x-powered-by');
@@ -44,8 +45,8 @@ const createApp = ({ verifyIdentity, consentService, pool, publicConfig, webRoot
             next();
         });
         app.use('/api/v1', createPrivacyRouter(consentService));
+        app.use('/api/v1', createAcademicRouter(academicService || createAcademicService({ consentService })));
     }
-    app.use('/api/v1/sections', sectionRouter);
     if (webRoot) {
         app.use(express.static(webRoot));
         app.get('/', (_req, res) => res.sendFile(path.join(webRoot, 'index.html')));

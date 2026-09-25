@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import liff from './line-client.js';
 import './style.css';
+import { CourseWorkspace } from './CourseWorkspace.jsx';
 
 const App = () => {
   const [consent, setConsent] = useState(null);
@@ -11,7 +12,6 @@ const App = () => {
   const [notice, setNotice] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [courses, setCourses] = useState(null);
   const callApi = async (route, options = {}) => {
     const token = liff.getIDToken();
     if (!token) throw new Error('Your LINE session has expired. Reopen the app to sign in.');
@@ -64,18 +64,14 @@ const App = () => {
         <button className="secondary" disabled={busy} onClick={() => { setAccepted(false); setNotice('Declined. No student record was created by this choice.'); }}>Decline</button>
       </> : <>
         <p className="success">Storage consent is active.</p>
-        <button disabled={busy} onClick={() => act(async () => {
-          setCourses(await callApi('/enrollments'));
-        })}>View my courses</button>
-        {courses && <div><h3>My courses</h3>{courses.items.length ? <ul>{courses.items.map((item) =>
-          <li key={item.id}>Section {item.sectionId}</li>)}</ul> : <p>No courses joined yet. Course creation and score entry are the next implementation stage.</p>}</div>}
+        <CourseWorkspace api={callApi} />
         <hr /><h3>Withdraw consent and delete my data</h3>
         <p>This removes your saved academic data and private chat state. Shared course structures used by classmates remain, with your creator attribution removed. This cannot be undone.</p>
         <label><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
           I confirm deletion of my saved data.</label>
         <button className="danger" disabled={!confirmed || busy} onClick={() => act(async () => {
           await callApi('/me/data', { method: 'DELETE', body: JSON.stringify({ confirmDeletion: true }) });
-          setCourses(null); setConfirmed(false); setAccepted(false);
+          setConfirmed(false); setAccepted(false);
           setConsent(await callApi('/consents')); setNotice('Your data was deleted and storage consent withdrawn.');
         })}>Delete my data</button>
       </>}

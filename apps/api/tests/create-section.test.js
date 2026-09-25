@@ -37,9 +37,9 @@ test('accepts norm without thresholds and exact decimal weights', () => {
   expect(validateCreateSection(input).success).toBe(true);
 });
 
-test('create route validates then returns honest placeholder', async () => {
+test('create route validates then invokes the section service', async () => {
   const app = createApp();
-  expect((await request(app).post('/api/v1/sections').send(fixture())).status).toBe(501);
+  expect((await request(app).post('/api/v1/sections').send(fixture())).status).toBe(201);
   const response = await request(app).post('/api/v1/sections').send({});
   expect(response.status).toBe(400);
   expect(response.body.error.details.length).toBeGreaterThan(0);

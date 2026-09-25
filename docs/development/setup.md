@@ -43,7 +43,7 @@ Integration tests truncate tables inside the explicitly named disposable rordmai
 Never point the test URL at academic data. On Windows, BROWSER_CHANNEL=msedge uses installed Edge.
 Otherwise install the Playwright Chromium browser using `npx playwright install chromium` from apps/web.
 
-Tests inject controlled identity verification. The production server always uses the real LINE adapter.
+Browser tests also require TEST_DATABASE_URL and truncate the disposable database before starting. The academic browser journey uses the real Express API and PostgreSQL; privacy/error UI tests use controlled responses. All browser tests replace only the LINE SDK identity module where needed. The production server always uses the real LINE adapter.
 There is no environment setting to bypass authentication.
 
 ## Free Render deployment
@@ -86,4 +86,3 @@ After the first workflow run exists, configure protection for main:
 - Demonstrate a deliberately failing PR is blocked and a reviewed green PR can merge.
 
 Writing workflow YAML does not configure repository protection. Record remote evidence after authorised GitHub account access is available.
-

@@ -30,16 +30,16 @@ const fixture = async () => {
 };
 test('migrations rerun without applying versions again', async () => {
   expect(await migrate(pool)).toEqual([]);
-  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(3);
+  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(4);
 });
 test('migration down/reapply succeeds in a separate disposable schema', async () => {
   const client = await pool.connect();
   try {
     await client.query('CREATE SCHEMA rollback_check');
     await client.query('SET search_path TO rollback_check');
-    for (const file of ['001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql',
-      '003_privacy_lifecycle.down.sql','002_storage_consent.down.sql','001_core.down.sql',
-      '001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql']) {
+    for (const file of ['001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql',
+      '004_component_order.down.sql','003_privacy_lifecycle.down.sql','002_storage_consent.down.sql','001_core.down.sql',
+      '001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql']) {
       await client.query(normaliseSql(await fs.readFile(path.resolve(__dirname, '../../../../migrations',file),'utf8')));
     }
     expect((await client.query('SELECT * FROM students')).rows).toEqual([]);

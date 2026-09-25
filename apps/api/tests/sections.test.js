@@ -10,13 +10,13 @@ describe('POST /api/v1/sections/join', () => {
     test.each([
     ['uppercase code', { joinCode: 'ABC123' }],
     ['lowercase code with whitespace', { joinCode: ' abc123 ' }],
-  ])('accepts %s and reaches the placeholder', async (_label, body) => {
+  ])('accepts %s and reaches the section service', async (_label, body) => {
     const response = await request(app)
       .post('/api/v1/sections/join')
       .send(body);
 
-    expect(response.status).toBe(501);
-    expect(response.body.error.code).toBe('NOT_IMPLEMENTED');
+    expect(response.status).toBe(201);
+    expect(response.body.data.joinCode).toBe('ABC123');
   });
 
   test.each([
