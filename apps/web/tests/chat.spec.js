@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { createSection, expectPoints, recordScore } from './ui-helpers.js';
 
 test('signed chat confirmation appears in LIFF; repeated confirmation preserves a later LIFF correction', async ({ page, request }, testInfo) => {
   const token = 'browser-chat-' + testInfo.project.name;
@@ -9,9 +10,8 @@ test('signed chat confirmation appears in LIFF; repeated confirmation preserves 
   await page.goto('/');
   await page.getByRole('checkbox', { name: /I agree/ }).check();
   await page.getByRole('button', { name: 'Agree and continue' }).click();
-  await page.getByRole('button', { name: 'Create a section', exact: true }).click();
-  await page.getByRole('button', { name: 'Save section', exact: true }).click();
-  await expect(page.getByText('Current weighted points:')).toContainText('0 / 100');
+  await createSection(page);
+  await expectPoints(page,0);
   let sequence = 0;
   const send = async text => {
     const body = JSON.stringify({ events: [{ type: 'message', source: { type: 'user', userId: lineUserId },
@@ -23,15 +23,14 @@ test('signed chat confirmation appears in LIFF; repeated confirmation preserves 
   for (const text of ['score', '1', '1', '80', 'confirm']) await send(text);
   await expect(async () => {
     await page.getByRole('button', { name: 'Refresh course and weights' }).click();
-    await expect(page.getByLabel('Midterm score', { exact: true })).toHaveValue('80');
+    await expect(page.getByText('Raw marks: 80 / 100')).toBeVisible();
   }).toPass();
-  await expect(page.getByText('Current weighted points:')).toContainText('32 / 100');
+  await expectPoints(page,32);
   await page.screenshot({ path: testInfo.outputPath('chat-saved-in-liff.png'), fullPage: true });
-  await page.getByLabel('Midterm score', { exact: true }).fill('70');
-  await page.getByRole('button', { name: 'Save Midterm', exact: true }).click();
-  await expect(page.getByText('Current weighted points:')).toContainText('28 / 100');
+  await recordScore(page,'Midterm',70);
+  await expectPoints(page,28);
   // Signed provider input and fake SDK identity are local harnesses, not a live LINE claim.
   await send('confirm');
   await page.getByRole('button', { name: 'Refresh course and weights' }).click();
-  await expect(page.getByLabel('Midterm score', { exact: true })).toHaveValue('70');
+  await expect(page.getByText('Raw marks: 70 / 100')).toBeVisible();
 });

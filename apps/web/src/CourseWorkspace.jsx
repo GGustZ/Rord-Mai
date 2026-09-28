@@ -1,191 +1,93 @@
-import React, { useState } from 'react';
-
-const thresholds = { A:80,'B+':75,B:70,'C+':65,C:60,'D+':55,D:50 };
-const presets = {
-  exams: [{name:'Midterm',weightPercent:40,maximumScore:100},{name:'Final',weightPercent:60,maximumScore:100}],
-  mixed: [{name:'Attendance',weightPercent:10,maximumScore:20},{name:'Assignments',weightPercent:20,maximumScore:50},{name:'Project',weightPercent:30,maximumScore:100},{name:'Final',weightPercent:40,maximumScore:100}],
-  norm: [{name:'Coursework',weightPercent:30,maximumScore:60},{name:'Examination',weightPercent:70,maximumScore:100}],
-};
-const initial = () => ({courseCode:'DEMO101',courseName:'Fictional mathematics',sectionNumber:'1',
-  academicYear:2026,semester:1,credits:3,gradingMode:'criterion',withdrawalDeadline:'2026-10-15',
-  gradeThresholds:{...thresholds},components:presets.exams.map(c=>({...c}))});
-const format = number => number === null ? 'Unavailable' : Number(number).toLocaleString(undefined,{maximumFractionDigits:2});
-
-const EntryForm = ({component,score,attendance,busy,onSave,onDelete}) => {
-  const [kind,setKind]=useState(attendance?'attendance':'scores');
-  const [raw,setRaw]=useState(score?.score??'');
-  const [attended,setAttended]=useState(attendance?.attended??'');
-  const [total,setTotal]=useState(attendance?.totalSessions??'');
-  return <form className="entry" onSubmit={event=>{
-    event.preventDefault();
-    onSave(kind,kind==='scores'?{score:Number(raw)}:{attended:Number(attended),totalSessions:Number(total)});
-  }}>
-    <h4>{component.name} <span>{component.weightPercent}% weight</span></h4>
-    <p>Maximum: {component.maximumScore} marks. {score ? 'Recorded: '+score.score : attendance ? 'Attendance: '+attendance.attended+'/'+attendance.totalSessions : 'Not recorded'}</p>
-    <label>Entry method<select value={kind} disabled={busy||Boolean(score)||Boolean(attendance)} onChange={e=>setKind(e.target.value)}>
-      <option value="scores">Raw marks</option><option value="attendance">Attendance</option>
-    </select></label>
-    {kind==='scores'?<label>{component.name} score<input type="number" required min="0" max={component.maximumScore} step="any" value={raw} onChange={e=>setRaw(e.target.value)}/></label>:
-      <div className="columns"><label>Attended<input type="number" required min="0" step="1" value={attended} onChange={e=>setAttended(e.target.value)}/></label>
-        <label>Total sessions<input type="number" required min="1" step="1" value={total} onChange={e=>setTotal(e.target.value)}/></label></div>}
-    <button disabled={busy}>Save {component.name}</button>
-    {(score||attendance)&&<button type="button" className="secondary" disabled={busy} onClick={()=>onDelete(attendance?'attendance':'scores')}>Clear {component.name} entry</button>}
-    {(score||attendance)&&<small>Clear the existing entry before switching method.</small>}
+import React, { useEffect, useRef, useState } from 'react';
+const thresholds={A:80,'B+':75,B:70,'C+':65,C:60,'D+':55,D:50};
+const presets={exams:[{name:'Midterm',weightPercent:40,maximumScore:100},{name:'Final',weightPercent:60,maximumScore:100}],mixed:[{name:'Attendance',weightPercent:10,maximumScore:20},{name:'Assignments',weightPercent:20,maximumScore:50},{name:'Project',weightPercent:30,maximumScore:100},{name:'Final',weightPercent:40,maximumScore:100}],norm:[{name:'Coursework',weightPercent:30,maximumScore:60},{name:'Examination',weightPercent:70,maximumScore:100}]};
+const initial=()=>({courseCode:'DEMO101',courseName:'Fictional mathematics',sectionNumber:'1',academicYear:2026,semester:1,credits:3,gradingMode:'criterion',withdrawalDeadline:'2026-10-15',gradeThresholds:{...thresholds},components:presets.exams.map(c=>({...c}))});
+const format=n=>n==null?'Unavailable':Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
+const weightUnits=components=>components.reduce((sum,c)=>sum+Math.round(Number(c.weightPercent)*100),0);
+const WeightTotal=({components})=>{const total=weightUnits(components);return <div className={'weight-total '+(total===10000?'success':'error')} role="status"><strong>Total weight: {format(total/100)}%</strong><small>{total===10000?'Ready, weights add up to 100%.':total<10000?`Add ${format((10000-total)/100)}% to reach 100%.`:`Remove ${format((total-10000)/100)}% to reach 100%.`}</small></div>;};
+const EntryForm=({component,score,attendance,busy,onSave,onDelete})=>{
+  const [kind,setKind]=useState(attendance?'attendance':'scores'),[raw,setRaw]=useState(score?.score??''),[attended,setAttended]=useState(attendance?.attended??''),[total,setTotal]=useState(attendance?.totalSessions??'');
+  const recorded=Boolean(score||attendance),invalid=kind==='attendance'&&attended!==''&&total!==''&&Number(attended)>Number(total);
+  return <form className="card" onSubmit={e=>{e.preventDefault();if(!invalid)onSave(kind,kind==='scores'?{score:Number(raw)}:{attended:Number(attended),totalSessions:Number(total)});}}>
+    <h3>{component.name}</h3><p>{component.weightPercent}% weight · Maximum {component.maximumScore} marks</p>
+    <div className="tabs" aria-label="Entry method"><button type="button" aria-pressed={kind==='scores'} disabled={busy||(recorded&&kind!=='scores')} onClick={()=>setKind('scores')}>Raw marks</button><button type="button" aria-pressed={kind==='attendance'} disabled={busy||(recorded&&kind!=='attendance')} onClick={()=>setKind('attendance')}>Attendance</button></div>
+    {kind==='scores'?<label>{component.name} score<input type="number" required min="0" max={component.maximumScore} step="any" value={raw} onChange={e=>setRaw(e.target.value)}/></label>:<div className="columns"><label>Attended<input type="number" required min="0" max={total||undefined} step="1" value={attended} onChange={e=>setAttended(e.target.value)}/></label><label>Total sessions<input type="number" required min="1" step="1" value={total} onChange={e=>setTotal(e.target.value)}/></label></div>}
+    {invalid&&<p role="alert" className="error">Attended sessions cannot exceed total sessions.</p>}<button disabled={busy||invalid}>Save {component.name}</button>
+    {recorded&&<button type="button" className="secondary" disabled={busy} onClick={()=>onDelete(attendance?'attendance':'scores')}>Clear {component.name} entry</button>}<small>{recorded?'Clear the existing entry before switching method.':'A recorded zero counts as evaluated. An empty entry is unrecorded.'}</small>
   </form>;
 };
-
-export const CourseWorkspace = ({api}) => {
-  const [page,setPage]=useState(null);
-  const [names,setNames]=useState({});
-  const [detail,setDetail]=useState(null);
-  const [summary,setSummary]=useState(null);
-  const [target,setTarget]=useState(null);
-  const [targetGrade,setTargetGrade]=useState('A');
-  const [draft,setDraft]=useState(initial);
-  const [code,setCode]=useState('');
-  const [showCreate,setShowCreate]=useState(false);
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState('');
-  const [notice,setNotice]=useState('');
-  const [weights,setWeights]=useState([]);
-  const [confirmWeights,setConfirmWeights]=useState(false);
-  const [editingWeights,setEditingWeights]=useState(false);
-  const work=async fn=>{
-    setBusy(true);setError('');
-    try{await fn();}catch(e){setError(e.message);}finally{setBusy(false);}
-  };
-  const loadPage=async(cursor=null)=>{
-    const result=await api('/enrollments'+(cursor?'?cursor='+encodeURIComponent(cursor):''));
-    const sections=await Promise.all(result.items.map(item=>api('/sections/'+item.sectionId)));
-    setNames(old=>({...old,...Object.fromEntries(sections.map(s=>[s.id,s.courseName+' · '+s.sectionNumber]))}));
-    setPage(old=>cursor&&old?{...result,items:[...old.items,...result.items]}:result);
-  };
+const titles={courses:'My courses',add:'Add a course',join:'Join a section',joined:'Section joined',create1:'Create a section',create2:'Assessment structure',create3:'Grade thresholds',created:'Section created',detail:'Course progress',entry:'Record an entry',target:'Target grade',weights:'Correct shared weights',privacy:'Your data'};
+export const CourseWorkspace=({api,privacy,privacyBusy})=>{
+  const [screen,setScreen]=useState('courses'),[page,setPage]=useState(null),[sections,setSections]=useState({}),[detail,setDetail]=useState(null),[summary,setSummary]=useState(null),[target,setTarget]=useState(null),[targetGrade,setTargetGrade]=useState('A');
+  const [draft,setDraft]=useState(initial),[preset,setPreset]=useState('exams'),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[weights,setWeights]=useState([]),[confirmWeights,setConfirmWeights]=useState(false),[componentId,setComponentId]=useState('');
+  const [completed,setCompleted]=useState(null);
+  const heading=useRef(null),locked=busy||privacyBusy;
+  const work=async fn=>{setBusy(true);setError('');try{await fn();}catch(e){setError(e.message);}finally{setBusy(false);}};
+  const go=next=>{setError('');setNotice('');setScreen(next);};
+  useEffect(()=>{heading.current?.focus();window.scrollTo(0,0);},[screen]);
+  useEffect(()=>{
+    let active=true;setBusy(true);
+    (async()=>{const result=await api('/enrollments');const loaded=await Promise.all(result.items.map(item=>api('/sections/'+item.sectionId)));if(active){setPage(result);setSections(Object.fromEntries(loaded.map(s=>[s.id,s])));}})().catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setBusy(false);});
+    return()=>{active=false;};
+  },[api]);
+  const loadPage=async(cursor=null)=>{const result=await api('/enrollments'+(cursor?'?cursor='+encodeURIComponent(cursor):''));const loaded=await Promise.all(result.items.map(item=>api('/sections/'+item.sectionId)));setSections(old=>({...old,...Object.fromEntries(loaded.map(s=>[s.id,s]))}));setPage(old=>cursor&&old?{...result,items:[...old.items,...result.items]}:result);};
   const loadDetail=async id=>{
-    // Both responses identify their revision. Never display a mixed-revision view.
+    // Keep entries and calculations on the same grading revision.
     for(let attempt=0;attempt<3;attempt++){
-      const next=await api('/enrollments/'+id);
-      const calculated=await api('/enrollments/'+id+'/summary');
+      const next=await api('/enrollments/'+id),calculated=await api('/enrollments/'+id+'/summary');
       if(next.section.structureRevision!==calculated.structureRevision)continue;
-      if(detail&&detail.section.id===next.section.id&&detail.section.structureRevision!==next.section.structureRevision){
-        setNotice('The creator changed grading weights. Results have been recalculated; your raw scores are unchanged.');
-      }
-      setDetail(next);setSummary(calculated);setTarget(null);
-      setTargetGrade(next.enrollment.targetGrade||'A');
-      setWeights(next.section.components.map(c=>({id:c.id,weightPercent:c.weightPercent})));
-      setConfirmWeights(false);setEditingWeights(false);
-      return;
+      if(detail&&detail.section.id===next.section.id&&detail.section.structureRevision!==next.section.structureRevision)setNotice('The creator changed grading weights. Results have been recalculated; your raw scores are unchanged.');
+      setDetail(next);setSummary(calculated);setTarget(null);setTargetGrade(next.enrollment.targetGrade||'A');setWeights(next.section.components.map(c=>({id:c.id,weightPercent:c.weightPercent})));setConfirmWeights(false);return;
     }
     throw Error('The course is changing. Refresh and try again.');
   };
   const setField=(key,value)=>setDraft(old=>({...old,[key]:value}));
-  const choosePreset=key=>setDraft({...initial(),courseName:key==='norm'?'Fictional norm course':key==='mixed'?'Fictional design studio':'Fictional mathematics',
-    gradingMode:key==='norm'?'norm':'criterion',gradeThresholds:key==='norm'?null:{...thresholds},components:presets[key].map(c=>({...c}))});
-  return <div className="workspace">
-    <h3>My courses</h3>
-    {error&&<p role="alert" className="error">{error}</p>}
-    {notice&&<p role="status">{notice}</p>}
-    <button disabled={busy} onClick={()=>work(()=>loadPage())}>View my courses</button>
-    {page&&<div>{page.items.length?<ul className="course-list">{page.items.map(item=><li key={item.id}>
-      <button className="secondary" disabled={busy} onClick={()=>work(()=>loadDetail(item.id))}>{names[item.sectionId]||'Open course'}</button>
-    </li>)}</ul>:<p>No courses joined yet. Create a section or enter a classmate's join code.</p>}
-    {page.nextCursor&&<button disabled={busy} onClick={()=>work(()=>loadPage(page.nextCursor))}>Load more courses</button>}</div>}
-    <form onSubmit={e=>{e.preventDefault();work(async()=>{
-      const joined=await api('/sections/join',{method:'POST',body:JSON.stringify({joinCode:code})});
-      await loadPage();await loadDetail(joined.id);setCode('');setNotice('Section joined.');
-    });}}>
-      <label>Section join code<input required maxLength="6" value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/></label>
-      <button disabled={busy}>Join section</button>
-    </form>
-    <button className="secondary" disabled={busy} onClick={()=>setShowCreate(!showCreate)}>{showCreate?'Close creation form':'Create a section'}</button>
-    {showCreate&&<form onSubmit={e=>{e.preventDefault();work(async()=>{
-      const payload={...draft,academicYear:Number(draft.academicYear),semester:Number(draft.semester),credits:Number(draft.credits),
-        components:draft.components.map(c=>({...c,weightPercent:Number(c.weightPercent),maximumScore:Number(c.maximumScore)})),
-        gradeThresholds:draft.gradingMode==='norm'?null:Object.fromEntries(Object.entries(draft.gradeThresholds).map(([k,v])=>[k,Number(v)]))};
-      const saved=await api('/sections',{method:'POST',body:JSON.stringify(payload)});
-      setShowCreate(false);await loadPage();await loadDetail(saved.enrollment.id);
-      setNotice('Section created. Share its join code with your classmates.');
-    });}}>
-      <h3>New section</h3>
-      <p>Start with fictional demo data, then enter the rules from the teacher's syllabus. Review every weight and threshold.</p>
-      <label>Load a demo structure<select defaultValue="exams" onChange={e=>choosePreset(e.target.value)}>
-        <option value="exams">Two exams, 40/60</option><option value="mixed">Four assessments, 10/20/30/40</option><option value="norm">Norm grading, 30/70</option>
-      </select></label>
-      {['courseCode','courseName','sectionNumber'].map((key,i)=><label key={key}>{['Course code','Course name','Section number'][i]}
-        <input required value={draft[key]} onChange={e=>setField(key,e.target.value)}/></label>)}
-      <div className="columns">{['academicYear','semester','credits'].map((key,i)=><label key={key}>{['Academic year','Semester','Credits'][i]}
-        <input required type="number" min="1" step="1" max={key==='semester'?3:key==='academicYear'?9999:undefined} value={draft[key]} onChange={e=>setField(key,e.target.value)}/></label>)}</div>
-      <label>Withdrawal deadline<input required type="date" value={draft.withdrawalDeadline} onChange={e=>setField('withdrawalDeadline',e.target.value)}/></label>
-      <label>Grading mode<select value={draft.gradingMode} onChange={e=>setDraft(old=>({...old,gradingMode:e.target.value,gradeThresholds:e.target.value==='norm'?null:{...thresholds}}))}>
-        <option value="criterion">Criterion: teacher gives grade thresholds</option><option value="norm">Norm: no fixed grade prediction</option>
-      </select></label>
-      {draft.gradeThresholds&&<fieldset><legend>Minimum percentage for each grade</legend><div className="columns">
-        {Object.entries(draft.gradeThresholds).map(([grade,value])=><label key={grade}>{grade}
-          <input type="number" required min="0" max="100" step="any" value={value} onChange={e=>setDraft(old=>({...old,gradeThresholds:{...old.gradeThresholds,[grade]:e.target.value}}))}/></label>)}
-      </div></fieldset>}
-      <fieldset><legend>Assessment components</legend>
-        {draft.components.map((c,index)=><div className="component-draft" key={index}>
-          {['name','weightPercent','maximumScore'].map((key,i)=><label key={key}>{['Component name','Weight (%)','Maximum marks'][i]}
-            <input required type={key==='name'?'text':'number'} min={key==='name'?undefined:'0.01'} step={key==='weightPercent'?'0.01':'any'} value={c[key]}
-              onChange={e=>setDraft(old=>({...old,components:old.components.map((v,n)=>n===index?{...v,[key]:e.target.value}:v)}))}/></label>)}
-          <button type="button" className="secondary" disabled={draft.components.length===1} onClick={()=>setDraft(old=>({...old,components:old.components.filter((_,n)=>n!==index)}))}>Remove component {index+1}</button>
-        </div>)}
-        <p>Total: {format(draft.components.reduce((sum,c)=>sum+Number(c.weightPercent),0))}% (must be 100%)</p>
-        <button type="button" className="secondary" disabled={draft.components.length>=30} onClick={()=>setDraft(old=>({...old,components:[...old.components,{name:'',weightPercent:0,maximumScore:100}]}))}>Add component</button>
-      </fieldset>
-      <button disabled={busy}>Save section</button>
-    </form>}
-    {detail&&summary&&<article>
-      <h3>{detail.section.courseName} · Section {detail.section.sectionNumber}</h3>
-      <p>Join code: <strong>{detail.section.joinCode}</strong> · Structure revision {detail.section.structureRevision}</p>
-      <button className="secondary" disabled={busy} onClick={()=>work(()=>loadDetail(detail.enrollment.id))}>Refresh course and weights</button>
-      <div className="results">
-        <p>Current weighted points: <strong>{format(summary.currentWeightedScore)} / 100</strong></p>
-        <p>Remaining weight: {format(summary.remainingWeightPercent)}%</p>
-        <p>Maximum possible: {format(summary.maximumPossibleScore)} / 100</p>
-        {summary.projectedGrade&&<p>Calculated grade: {summary.projectedGrade}</p>}
-      </div>
-      {detail.section.gradingMode==='norm'?<p>Norm grading: a letter grade cannot be predicted without the class grading decision.</p>:<form onSubmit={e=>{e.preventDefault();work(async()=>{
-        await api('/enrollments/'+detail.enrollment.id,{method:'PATCH',body:JSON.stringify({targetGrade})});
-        const result=await api('/enrollments/'+detail.enrollment.id+'/target-calculation',{method:'POST',body:JSON.stringify({targetGrade})});
-        if(result.structureRevision!==detail.section.structureRevision){await loadDetail(detail.enrollment.id);throw Error('Weights changed. Review the updated results and calculate again.');}
-        setTarget(result);
-      });}}>
-        <label>Target grade<select value={targetGrade} onChange={e=>{setTargetGrade(e.target.value);setTarget(null);}}>
-          {Object.keys(thresholds).map(g=><option key={g}>{g}</option>)}</select></label>
-        <button disabled={busy}>Save target and calculate</button>
-        {target&&<p role="status">{target.reasonCode==='ALREADY_ACHIEVED'?'Target already achieved.':target.reasonCode==='NO_REMAINING_WEIGHT'?'No remaining assessment weight.':
-          'Required on remaining assessments: '+format(target.requiredRemainingPercent)+'%.'} {!target.reachable&&'This target is unreachable under the current structure.'}</p>}
-      </form>}
-      {detail.section.components.map(component=>{
-        const score=detail.scores.find(s=>s.componentId===component.id);
-        const attendance=detail.attendance.find(s=>s.componentId===component.id);
-        return <EntryForm key={component.id+':'+(score?.updatedAt||attendance?.updatedAt||'empty')} component={component} score={score} attendance={attendance} busy={busy}
-          onSave={(kind,input)=>work(async()=>{
-            await api('/enrollments/'+detail.enrollment.id+'/'+kind+'/'+component.id,{method:'PUT',body:JSON.stringify(input)});
-            await loadDetail(detail.enrollment.id);setNotice('Entry saved.');
-          })}
-          onDelete={kind=>work(async()=>{
-            await api('/enrollments/'+detail.enrollment.id+'/'+kind+'/'+component.id,{method:'DELETE',body:'{}'});
-            await loadDetail(detail.enrollment.id);setNotice('Entry cleared. It is now unrecorded.');
-          })}/>;
-      })}
-      {detail.section.canEdit&&<>
-        <button className="secondary" disabled={busy} onClick={()=>setEditingWeights(!editingWeights)}>Correct shared weights</button>
-        {editingWeights&&<form onSubmit={e=>{e.preventDefault();work(async()=>{
-          await api('/sections/'+detail.section.id+'/grading-structure',{method:'PATCH',body:JSON.stringify({expectedRevision:detail.section.structureRevision,components:weights.map(w=>({...w,weightPercent:Number(w.weightPercent)}))})});
-          await loadDetail(detail.enrollment.id);setNotice('Shared weights corrected. All classmates keep their raw scores.');
-        });}}>
-          <h4>Review weight corrections</h4>
-          <p>This changes everyone's calculated results. Raw scores, maximum marks and component membership remain unchanged.</p>
-          {detail.section.components.map((c,i)=><label key={c.id}>{c.name}: currently {c.weightPercent}%
-            <input required aria-label={c.name+' corrected weight'} type="number" min="0.01" max="100" step="0.01" value={weights[i]?.weightPercent??''}
-              onChange={e=>setWeights(old=>old.map((v,n)=>n===i?{...v,weightPercent:e.target.value}:v))}/></label>)}
-          <p>Total: {format(weights.reduce((sum,w)=>sum+Number(w.weightPercent),0))}%</p>
-          <label><input type="checkbox" checked={confirmWeights} onChange={e=>setConfirmWeights(e.target.checked)}/>I checked these corrected weights against the teacher's grading structure.</label>
-          <button disabled={busy||!confirmWeights}>Save corrected weights</button>
-        </form>}
-      </>}
-    </article>}
-  </div>;
+  const choosePreset=key=>{setPreset(key);setDraft({...initial(),courseName:key==='norm'?'Fictional norm course':key==='mixed'?'Fictional design studio':'Fictional mathematics',gradingMode:key==='norm'?'norm':'criterion',gradeThresholds:key==='norm'?null:{...thresholds},components:presets[key].map(c=>({...c}))});};
+  const create=()=>work(async()=>{
+    const payload={...draft,academicYear:Number(draft.academicYear),semester:Number(draft.semester),credits:Number(draft.credits),components:draft.components.map(c=>({...c,weightPercent:Number(c.weightPercent),maximumScore:Number(c.maximumScore)})),gradeThresholds:draft.gradingMode==='norm'?null:Object.fromEntries(Object.entries(draft.gradeThresholds).map(([k,v])=>[k,Number(v)]))};
+    const saved=await api('/sections',{method:'POST',body:JSON.stringify(payload)});
+    setCompleted(saved);setDetail(null);setSummary(null);setScreen('created');
+  });
+  const back=()=>{const next=screen==='create3'?'create2':screen==='create2'?'create1':screen==='create1'||screen==='join'?'add':['entry','target','weights'].includes(screen)?'detail':'courses';go(next);if(next==='courses')work(()=>loadPage());};
+  const component=detail?.section.components.find(c=>c.id===componentId)||detail?.section.components[0],score=detail?.scores.find(s=>s.componentId===component?.id),attendance=detail?.attendance.find(s=>s.componentId===component?.id);
+  const steps=draft.gradingMode==='norm'?2:3,step=Number(screen.slice(-1));
+  const completedSection=completed?.section||detail?.section;
+  return <><section className="screen" aria-labelledby="screen-title" aria-busy={locked}>
+    <div className="screen-heading">{screen!=='courses'&&<button className="back" disabled={locked} onClick={back} aria-label="Back">←</button>}<div><p className="eyebrow">{screen.startsWith('create')&&screen!=='created'?`STEP ${step} OF ${steps}`:'ACADEMIC TRACKER'}</p><h2 id="screen-title" ref={heading} tabIndex="-1">{titles[screen]}</h2></div></div>
+    {error&&<p role="alert" className="error message">{error}</p>}{notice&&<p role="status" className="message">{notice}</p>}{busy&&<p role="status" className="loading">Updating your course…</p>}
+    {screen==='courses'&&<><p>Your courses, scores and next steps in one place.</p><button className="secondary" disabled={locked} onClick={()=>work(()=>loadPage())}>Refresh courses</button>
+      {page?.items.length===0&&<div className="card empty"><span className="large-symbol" aria-hidden="true">＋</span><h3>No courses joined yet</h3><p>Create a section or enter a classmate's join code.</p><button disabled={locked} onClick={()=>go('add')}>Add a course</button></div>}
+      <div className="course-list">{page?.items.map(item=>{const s=sections[item.sectionId];return <button key={item.id} className="course-card" disabled={locked} onClick={()=>work(async()=>{await loadDetail(item.id);setScreen('detail');})}><span className="tag">{s?.courseCode}</span><strong>{s?.courseName||'Open course'}</strong><span>Section {s?.sectionNumber} · {s?.credits} credits</span><span className="card-action">View progress <span aria-hidden="true">→</span></span></button>;})}</div>
+      {page?.nextCursor&&<button className="secondary" disabled={locked} onClick={()=>work(()=>loadPage(page.nextCursor))}>Load more courses</button>}</>}
+    {screen==='add'&&<><p>Join your classmates or build a section from your teacher's grading structure.</p><button className="choice-card" disabled={locked} onClick={()=>go('join')}><span className="choice-icon" aria-hidden="true">↗</span><strong>Join a section</strong><span>Enter the 6-character code shared by a classmate.</span></button><button className="choice-card" disabled={locked} onClick={()=>go('create1')}><span className="choice-icon" aria-hidden="true">＋</span><strong>Create a section</strong><span>Add course details, assessment weights and grade thresholds.</span></button></>}
+    {screen==='join'&&<form className="card" onSubmit={e=>{e.preventDefault();work(async()=>{const joined=await api('/sections/join',{method:'POST',body:JSON.stringify({joinCode:code.trim()})});setCompleted({enrollment:joined});setDetail(null);setSummary(null);setCode('');setScreen('joined');await loadDetail(joined.id);});}}><p>Ask your classmate for the section's join code. Joining adds it to your courses immediately.</p><label>Section join code<input className="code-input" required minLength="6" maxLength="6" pattern="[A-Za-z0-9]{6}" autoCapitalize="characters" autoComplete="off" value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/></label><button disabled={locked}>Join section</button><small>Your scores and attendance stay private.</small></form>}
+    {screen.startsWith('create')&&screen!=='created'&&<><div className="steps" aria-label={`Step ${step} of ${steps}`}>{Array.from({length:steps},(_,i)=><span key={i} className={i<step?'active':''}/>)}</div>
+      <form onSubmit={e=>{e.preventDefault();if(screen==='create1')go('create2');else if(screen==='create2'){if(weightUnits(draft.components)!==10000)return;draft.gradingMode==='norm'?create():go('create3');}else create();}}>
+        {screen==='create1'&&<div className="card"><h3>Basic information</h3><p>Use the rules from your teacher's syllabus. Demo presets contain fictional data.</p><label>Load a demo structure<select value={preset} onChange={e=>choosePreset(e.target.value)}><option value="exams">Two exams, 40/60</option><option value="mixed">Four assessments, 10/20/30/40</option><option value="norm">Norm grading, 30/70</option></select></label>
+          {['courseCode','courseName','sectionNumber'].map((key,i)=><label key={key}>{['Course code','Course name','Section number'][i]}<input required maxLength={[30,200,20][i]} value={draft[key]} onChange={e=>setField(key,e.target.value)}/></label>)}
+          <div className="columns">{['academicYear','semester','credits'].map((key,i)=><label key={key}>{['Academic year','Semester','Credits'][i]}<input required type="number" min="1" step="1" max={key==='semester'?3:key==='academicYear'?9999:undefined} value={draft[key]} onChange={e=>setField(key,e.target.value)}/></label>)}</div>
+          <label>Withdrawal deadline<input required type="date" value={draft.withdrawalDeadline} onChange={e=>setField('withdrawalDeadline',e.target.value)}/></label><label>Grading mode<select value={draft.gradingMode} onChange={e=>setDraft(old=>({...old,gradingMode:e.target.value,gradeThresholds:e.target.value==='norm'?null:{...thresholds}}))}><option value="criterion">Criterion: fixed grade thresholds</option><option value="norm">Norm: class grading decision</option></select></label></div>}
+        {screen==='create2'&&<><p>List each assessment and its contribution to the final grade.</p>{draft.components.map((c,index)=><fieldset className="card" key={index}><legend>Assessment {index+1}</legend><label>Component name<input required maxLength="100" value={c.name} onChange={e=>setDraft(old=>({...old,components:old.components.map((v,n)=>n===index?{...v,name:e.target.value}:v)}))}/></label><div className="columns">{['weightPercent','maximumScore'].map((key,i)=><label key={key}>{['Weight (%)','Maximum marks'][i]}<input required type="number" min="0.01" max={key==='weightPercent'?100:undefined} step={key==='weightPercent'?'0.01':'any'} value={c[key]} onChange={e=>setDraft(old=>({...old,components:old.components.map((v,n)=>n===index?{...v,[key]:e.target.value}:v)}))}/></label>)}</div><button type="button" className="text-button" disabled={locked||draft.components.length===1} onClick={()=>setDraft(old=>({...old,components:old.components.filter((_,n)=>n!==index)}))}>Remove component {index+1}</button></fieldset>)}
+          <button type="button" className="secondary" disabled={locked||draft.components.length>=30} onClick={()=>setDraft(old=>({...old,components:[...old.components,{name:'',weightPercent:0,maximumScore:100}]}))}>Add component</button><WeightTotal components={draft.components}/>{draft.gradingMode==='norm'&&<p className="message">Norm grading has no fixed letter-grade prediction or target calculation.</p>}</>}
+        {screen==='create3'&&<div className="card"><h3>Minimum percentage for each grade</h3><p>Enter descending thresholds from your teacher. These are not university-wide defaults.</p>{Object.entries(draft.gradeThresholds).map(([grade,value])=><label className="threshold-row" key={grade}><span className="grade-badge">{grade}</span><span>Minimum %<input aria-label={grade+' minimum percentage'} type="number" required min="0" max="100" step="any" value={value} onChange={e=>setDraft(old=>({...old,gradeThresholds:{...old.gradeThresholds,[grade]:e.target.value}}))}/></span></label>)}<small>F: below the D threshold.</small></div>}
+        <button disabled={locked||(screen==='create2'&&weightUnits(draft.components)!==10000)}>{screen==='create3'||(screen==='create2'&&draft.gradingMode==='norm')?'Create section':'Continue'}</button>
+      </form></>}
+    {['created','joined'].includes(screen)&&completed&&<div className="card success-card"><span className="success-mark" aria-hidden="true">✓</span><h3>{screen==='created'?'Your section is ready':'You joined the section'}</h3>
+      {completedSection&&<><p>{completedSection.courseCode} · {completedSection.courseName}</p><p>Section {completedSection.sectionNumber} · {completedSection.credits} credits</p><small>Share this join code with classmates</small><strong className="join-code">{completedSection.joinCode}</strong><button className="secondary" disabled={locked} onClick={()=>work(async()=>{await navigator.clipboard.writeText(completedSection.joinCode);setNotice('Join code copied.');})}>Copy code</button></>}
+      <button disabled={locked} onClick={()=>work(async()=>{await loadDetail(completed.enrollment.id);go('detail');})}>Go to course</button><small>Shared structure, private personal scores.</small></div>}
+    {screen==='detail'&&detail&&summary&&<><div className="course-heading"><span className="tag">{detail.section.courseCode}</span><h3>{detail.section.courseName}</h3><p>Section {detail.section.sectionNumber} · {detail.section.credits} credits · {detail.section.gradingMode} grading</p><small>Semester {detail.section.semester} / {detail.section.academicYear}</small><small>Join code: <strong>{detail.section.joinCode}</strong> · Structure revision {detail.section.structureRevision}</small></div><button className="secondary" disabled={locked} onClick={()=>work(()=>loadDetail(detail.enrollment.id))}>Refresh course and weights</button>
+      <div className="card progress-card"><p>Current weighted points</p><strong className="points">{format(summary.currentWeightedScore)} <span>/ 100</span></strong><progress aria-label="Evaluated assessment weight" max="100" value={summary.gradedWeightPercent}/><div className="metrics"><span>Evaluated <strong>{format(summary.gradedWeightPercent)}%</strong></span><span>Remaining <strong>{format(summary.remainingWeightPercent)}%</strong></span></div><p>Maximum possible: {format(summary.maximumPossibleScore)} / 100</p>{summary.projectedGrade&&<p>Calculated grade: <strong>{summary.projectedGrade}</strong></p>}</div>
+      {detail.section.gradingMode==='norm'?<p className="message">Norm grading: a letter grade cannot be predicted without the class grading decision.</p>:<button className="choice-card compact" disabled={locked} onClick={()=>go('target')}><strong>Target grade {detail.enrollment.targetGrade||'A'}</strong><span>Check what you need on remaining assessments →</span></button>}
+      <h3>Assessments</h3><div className="assessment-list">{detail.section.components.map(c=>{const raw=detail.scores.find(s=>s.componentId===c.id),att=detail.attendance.find(s=>s.componentId===c.id);return <button className="assessment-card" key={c.id} disabled={locked} onClick={()=>{setComponentId(c.id);go('entry');}}><span><strong>{c.name}</strong><small>{c.weightPercent}% weight · Maximum {c.maximumScore} marks</small></span><span className={raw||att?'recorded':'muted'}>{raw?`Raw marks: ${format(raw.score)} / ${format(c.maximumScore)}`:att?`Attendance: ${att.attended}/${att.totalSessions} (${format(att.attended/att.totalSessions*100)}%)`:'Not recorded'}<small>{raw||att?'Edit entry':'Record entry'} →</small></span></button>;})}</div>
+      <button disabled={locked} onClick={()=>{setComponentId(detail.section.components[0].id);go('entry');}}>Record score or attendance</button>{detail.section.canEdit&&<button className="secondary" disabled={locked} onClick={()=>go('weights')}>Correct shared weights</button>}</>}
+    {screen==='entry'&&component&&<><label>Assessment<select value={component.id} disabled={locked} onChange={e=>setComponentId(e.target.value)}>{detail.section.components.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><EntryForm key={component.id+':'+(score?.updatedAt||attendance?.updatedAt||'empty')} component={component} score={score} attendance={attendance} busy={locked}
+      onSave={(kind,input)=>work(async()=>{await api('/enrollments/'+detail.enrollment.id+'/'+kind+'/'+component.id,{method:'PUT',body:JSON.stringify(input)});await loadDetail(detail.enrollment.id);setScreen('detail');setNotice('Entry saved.');})}
+      onDelete={kind=>work(async()=>{await api('/enrollments/'+detail.enrollment.id+'/'+kind+'/'+component.id,{method:'DELETE',body:'{}'});await loadDetail(detail.enrollment.id);setNotice('Entry cleared. It is now unrecorded.');})}/></>}
+    {screen==='target'&&detail?.section.gradingMode==='criterion'&&<><p>Choose the grade you are aiming for. Results use your current entries and this section's thresholds.</p><form className="card" onSubmit={e=>{e.preventDefault();work(async()=>{await api('/enrollments/'+detail.enrollment.id,{method:'PATCH',body:JSON.stringify({targetGrade})});const result=await api('/enrollments/'+detail.enrollment.id+'/target-calculation',{method:'POST',body:JSON.stringify({targetGrade})});if(result.structureRevision!==detail.section.structureRevision){await loadDetail(detail.enrollment.id);throw Error('Weights changed. Review the updated results and calculate again.');}setDetail(old=>({...old,enrollment:{...old.enrollment,targetGrade}}));setTarget(result);});}}>
+      <div className="grade-options" aria-label="Target grade">{Object.keys(thresholds).map(g=><button key={g} type="button" aria-label={'Target grade '+g} aria-pressed={targetGrade===g} disabled={locked} onClick={()=>{setTargetGrade(g);setTarget(null);}}>{g}</button>)}</div><button disabled={locked}>Save target and calculate</button></form>
+      {target&&<div className="card target-result" role="status"><p>Target {target.targetGrade} · {format(target.targetThreshold)} points</p><h3>{target.reasonCode==='ALREADY_ACHIEVED'?'Target already achieved.':target.reasonCode==='NO_REMAINING_WEIGHT'?'No remaining assessment weight.':`Required on remaining assessments: ${format(target.requiredRemainingPercent)}%.`}</h3><p>{!target.reachable?'This target is unreachable under the current structure.':target.reasonCode==='ALREADY_ACHIEVED'?'Your recorded weighted points meet the threshold.':'This is the average percentage needed across the remaining weight.'}</p><small>Current weighted points: {format(target.currentWeightedScore)} · Remaining weight: {format(target.remainingWeightPercent)}%</small></div>}</>}
+    {screen==='weights'&&detail?.section.canEdit&&<form className="card" onSubmit={e=>{e.preventDefault();if(!confirmWeights||weightUnits(weights)!==10000)return;work(async()=>{await api('/sections/'+detail.section.id+'/grading-structure',{method:'PATCH',body:JSON.stringify({expectedRevision:detail.section.structureRevision,components:weights.map(w=>({...w,weightPercent:Number(w.weightPercent)}))})});await loadDetail(detail.enrollment.id);setScreen('detail');setNotice('Shared weights corrected. All classmates keep their raw scores.');});}}><p>This changes everyone's calculated results. Check your teacher's structure before saving.</p>
+      {detail.section.components.map((c,i)=><label key={c.id}>{c.name}: currently {c.weightPercent}%<input required aria-label={c.name+' corrected weight'} type="number" min="0.01" max="100" step="0.01" value={weights[i]?.weightPercent??''} onChange={e=>setWeights(old=>old.map((v,n)=>n===i?{...v,weightPercent:e.target.value}:v))}/></label>)}<WeightTotal components={weights}/><label className="check"><input type="checkbox" checked={confirmWeights} disabled={locked} onChange={e=>setConfirmWeights(e.target.checked)}/>I checked these corrected weights against the teacher's grading structure.</label><button disabled={locked||!confirmWeights||weightUnits(weights)!==10000}>Save corrected weights</button></form>}
+    {screen==='privacy'&&privacy}
+  </section><nav className="bottom-nav" aria-label="Main navigation"><button aria-current={screen==='courses'?'page':undefined} disabled={locked} onClick={()=>{go('courses');work(()=>loadPage());}}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Courses</button><button aria-current={['add','join','create1','create2','create3'].includes(screen)?'page':undefined} disabled={locked} onClick={()=>go('add')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add course</button><button aria-current={screen==='privacy'?'page':undefined} disabled={locked} onClick={()=>go('privacy')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/><path d="m8 12 3 3 5-6"/></svg>Privacy</button></nav></>;
 };
-

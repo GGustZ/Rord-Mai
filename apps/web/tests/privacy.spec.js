@@ -34,10 +34,11 @@ test('decline, explicit grant, course empty state and confirmed deletion',async(
   expect(writes).toBe(0);
   await page.getByRole('checkbox',{name:/I agree/}).check();
   await agree.click();
-  await expect(page.getByText('Storage consent is active.')).toBeVisible();
-  await page.getByRole('button',{name:'View my courses'}).click();
+  await expect(page.getByRole('heading',{name:'My courses',exact:true})).toBeVisible();
   await expect(page.getByText(/No courses joined yet/)).toBeVisible();
   await page.screenshot({path:testInfo.outputPath('consent-active.png'),fullPage:true});
+  await page.getByRole('navigation').getByRole('button',{name:'Privacy'}).click();
+  await expect(page.getByText('Storage consent is active.')).toBeVisible();
   const remove=page.getByRole('button',{name:'Delete my data',exact:true});
   await expect(remove).toBeDisabled();
   await page.getByRole('checkbox',{name:/I confirm deletion/}).check();
