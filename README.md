@@ -19,7 +19,7 @@ From the repository root, `npm run check` runs ESLint, API and engine tests, and
 5. apps/api/src/lib/validate-create-section.js checks plain input without network or database access.
 6. apps/api/tests contains regression tests for these behaviors.
 
-GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent, section create/join/read, creator weight revisions, own enrolments, scores/attendance, targets, persisted calculations and confirmed deletion work with PostgreSQL. React connects these flows. LINE chat and Rich Menu integration remain pending.
+GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent, section create/join/read, creator weight revisions, own enrolments, scores/attendance, targets, persisted calculations and confirmed deletion work with PostgreSQL. React connects these flows. Signed LINE chat now uses the same protected academic service. Rich Menu assets and registration are ready; real LINE registration, identity parity and delivery still require verification. See [release setup](docs/line/release-setup.md).
 
 The current API-01 specification is docs/api/contract.md. Team review is outstanding. The earlier learning notes in docs/api/README.md are historical and are superseded where they differ from the contract.
 

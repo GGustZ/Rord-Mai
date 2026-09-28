@@ -62,6 +62,14 @@ Confirmed storage withdrawal through PUT /consents performs the same deletion as
 
 ## Calculation result definitions
 
+### LINE transport (outside /api/v1)
+
+POST /webhooks/line accepts LINE Messaging API event batches with x-line-signature. HMAC-SHA256 verification uses the original raw bytes before JSON parsing. Empty events returns 200 for provider verification. Invalid/missing signature returns 401, malformed signed JSON returns 400, and durable-acceptance failure returns 503. Successful intake returns 200 after jobs are committed; it does not imply a score has been confirmed or a reply delivered.
+
+Only direct user text is processed. Consentless users receive a LIFF link without persistent academic input. Consented jobs deduplicate webhookEventId, expire after five minutes and retain the original student UUID. Chat drafts expire after 15 inactive minutes. The confirmation operation reuses the academic writer and cancels when the selected revision or score changed. Both channels preserve ownership, consent and attendance-source rules. See ../development/interfaces.md for worker and deletion semantics.
+
+### REST calculation results
+
 CourseSummary = {currentWeightedScore:number, gradedWeightPercent:number, remainingWeightPercent:number, maximumPossibleScore:number, gradingMode, projectedGrade:grade|null, projectionAssumption:string|null, reasonCode:string|null}.
 Weighted score is percentage points, not the average over graded components. gradedWeightPercent + remainingWeightPercent = 100. Predictions must name the remaining-performance assumption. Norm mode always has projectedGrade:null and reasonCode:"NORM_REFERENCED". The engine owns every numeric result.
 

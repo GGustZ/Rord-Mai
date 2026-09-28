@@ -28,7 +28,7 @@ For Docker: set POSTGRES_PASSWORD, LINE_LOGIN_CHANNEL_ID and LIFF_ID in .env, th
 docker compose up --build
 ```
 Use a URL-safe local development password in Compose. App and DB use a private container network; local published ports bind to loopback.
-The container includes Thai and English Tesseract binaries, but no OCR feature is enabled yet.
+The progress container omits OCR packages because OCR is outside this release.
 
 ## Verification
 
@@ -48,7 +48,7 @@ There is no environment setting to bypass authentication.
 
 ## Free Render deployment
 
-render.yaml defines an app and PostgreSQL in Singapore. Import the repository as a Blueprint and supply LINE_LOGIN_CHANNEL_ID and LIFF_ID. Confirm both plans are free before creation. No paid upgrade is authorised.
+render.yaml defines an app and PostgreSQL in Singapore. Import the repository as a Blueprint and supply LINE_LOGIN_CHANNEL_ID, LIFF_ID, LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN. Confirm both plans are free before creation. No paid upgrade is authorised.
 
 The Docker startup runs migrations because a separate pre-deploy step may be unavailable on a free service.
 The app must pass /ready. Set the LIFF endpoint to the public HTTPS root after deployment.
@@ -61,7 +61,7 @@ A successful local build is not a deployed service. Record the URL and executed 
 Free services sleep when idle. Free PostgreSQL expires after 30 days. Record creation and expiry dates and export before expiry, then decide continuity before the provisional final deadline.
 Use pg_dump/pg_restore with a secure environment or database client. Restore to a separate empty database and verify counts before relying on a backup.
 
-Provider reference: https://render.com/docs/free (checked 24 September 2026).
+Provider reference: https://render.com/docs/free (rechecked 27 September 2026).
 
 ## LINE setup
 
@@ -69,7 +69,7 @@ Provider reference: https://render.com/docs/free (checked 24 September 2026).
 2. Create LINE Login under the same provider, enable web app and add both test accounts as testers while the channel is in development.
 3. Add a LIFF app with openid scope and the public HTTPS endpoint. Record the LIFF ID and Login channel ID in server configuration.
 4. Open LIFF from each test account. Check that login alone creates no student record, grant creates one, and confirmed deletion removes it.
-5. Chat identity parity, webhook signature validation and Rich Menu are the 27 September integration stage. Do not claim them from this consent screen.
+5. Follow [LINE chat and release setup](../line/release-setup.md) for webhook registration, Rich Menu and real identity-parity checks. Local chat tests do not prove real LINE delivery.
 
 Server identity verification: https://developers.line.biz/en/reference/line-login/#verify-id-token
 LIFF user data: https://developers.line.biz/en/docs/liff/using-user-profile/

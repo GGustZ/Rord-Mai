@@ -52,4 +52,10 @@ Status: Ready for team review.
 - Shared grading structures are immutable through the v1 application.
 - Database relationships do not authenticate users or authorize requests.
 
-The five-table migration is a foundation, not the complete feature schema.
+The five-table migration above describes the original foundation, not the current complete schema. The earlier immutability note is superseded: creators may now revise the full set of weights using an expected revision, without changing components or rescaling marks.
+
+## Current physical schema, 27 September 2026
+
+The editable ERD and PNG in `diagrams/` were reconciled against a PostgreSQL database with migrations 001 through 004 applied: 10 application tables plus schema_migrations, with 13 foreign keys. Migration 002 adds consent evidence; 003 adds attendance, profiles, grading revisions, conversation state, private jobs and nullable creator attribution; 004 adds component order and pagination support. A profile table does not imply that the deferred profile/GPAX features are implemented.
+
+Chat reuses conversation_state and private_jobs without a new migration. All private records cascade on student deletion; sections and revisions preserve shared grading structure with creator/actor attribution cleared. Upper mark bounds, complete weight totals, ownership and writer/withdrawal transactions are enforced by the application and covered by integration tests. See `privacy-lifecycle.md` and `../development/interfaces.md`.

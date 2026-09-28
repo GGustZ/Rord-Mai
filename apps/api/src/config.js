@@ -10,7 +10,11 @@ const readConfig = (env = process.env) => {
   if (!/^\d+-[A-Za-z0-9]+$/.test(env.LIFF_ID)) throw new Error('Invalid LIFF_ID.');
   const port = Number(env.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT.');
+  const channelSecret = env.LINE_CHANNEL_SECRET?.trim();
+  const accessToken = env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
+  if (Boolean(channelSecret) !== Boolean(accessToken)) throw new Error('Set both LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN.');
   return { databaseUrl: env.DATABASE_URL, channelId: env.LINE_LOGIN_CHANNEL_ID,
-    liffId: env.LIFF_ID, policyVersion: env.STORAGE_POLICY_VERSION, port };
+    liffId: env.LIFF_ID, policyVersion: env.STORAGE_POLICY_VERSION, port,
+    messaging: channelSecret ? { channelSecret, accessToken } : null };
 };
 module.exports = { readConfig };

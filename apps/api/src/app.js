@@ -6,8 +6,9 @@ const { createPrivacyRouter } = require('./http/routes/privacy-routes');
 const { fail } = require('./lib/errors');
 const { createAcademicService } = require('./services/academic-service');
 const { createAcademicRouter } = require('./http/routes/academic-routes');
+const { createLineWebhook } = require('./http/routes/line-webhook');
 
-const createApp = ({ verifyIdentity, consentService, academicService, pool, publicConfig, webRoot } = {}) => {
+const createApp = ({ verifyIdentity, consentService, academicService, pool, publicConfig, webRoot, lineWebhook } = {}) => {
     const app = express();
 
     app.disable('x-powered-by');
@@ -18,6 +19,8 @@ const createApp = ({ verifyIdentity, consentService, academicService, pool, publ
         next();
     });
 
+    // LINE signs raw bytes. Mount before the REST JSON parser and bearer authentication.
+    if (lineWebhook) app.use('/webhooks/line', createLineWebhook(lineWebhook));
     app.use(express.json({ limit: '100kb', strict: false }));
 
     app.get('/health', (_req, res) => {
