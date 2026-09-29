@@ -1,0 +1,30 @@
+ .env.example                             |   3 [32m+[m
+ Dockerfile                               |   1 [31m-[m
+ README.md                                |   2 [32m+[m[31m-[m
+ apps/api/src/adapters/line-messaging.js  |  24 [32m++[m
+ apps/api/src/app.js                      |   5 [32m+[m[31m-[m
+ apps/api/src/config.js                   |   6 [32m+[m[31m-[m
+ apps/api/src/http/routes/line-webhook.js |  29 [32m++[m
+ apps/api/src/server.js                   |  16 [32m+[m[31m-[m
+ apps/api/src/services/chat-service.js    | 198 [32m+++++++++[m
+ apps/api/tests/config.test.js            |   7 [32m+[m
+ apps/api/tests/integration/chat.test.js  | 227 [32m+++++++++++[m
+ apps/api/tests/rich-menu.test.js         |  11 [32m+[m
+ apps/api/tests/webhook.test.js           |  45 [32m++[m
+ apps/web/playwright.config.js            |   1 [32m+[m
+ apps/web/tests/chat.spec.js              |  37 [32m++[m
+ apps/web/tests/global-setup.js           |  17 [32m+[m[31m-[m
+ compose.yaml                             |   2 [32m+[m
+ docs/api/contract.md                     |   8 [32m+[m
+ docs/database/design.md                  |   8 [32m+[m[31m-[m
+ docs/database/diagrams/ERD.drawio        | 676 [32m++++[m[31m---------------------------[m
+ docs/database/diagrams/ERD.png           | Bin [31m136939[m -> [32m403168[m bytes
+ docs/development/interfaces.md           |  18 [32m+[m[31m-[m
+ docs/development/setup.md                |   8 [32m+[m[31m-[m
+ docs/line/release-setup.md               |  45 [32m++[m
+ docs/line/rich-menu.png                  | Bin [31m0[m -> [32m105958[m bytes
+ docs/line/rich-menu.svg                  |   1 [32m+[m
+ render.yaml                              |   4 [32m+[m
+ scripts/check-deployment.cjs             |  36 [32m+[m[31m-[m
+ scripts/line-rich-menu.cjs               |  38 [32m++[m
+ 29 files changed, 845 insertions(+), 628 deletions(-)

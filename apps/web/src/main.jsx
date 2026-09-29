@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import liff from './line-client.js';
 import './style.css';
+import rordmaiLogo from './assets/rordmai-logo.png';
 import { CourseWorkspace } from './CourseWorkspace.jsx';
 
 const App = () => {
@@ -57,7 +58,7 @@ const App = () => {
       })}>Delete my data</button></div>
   </>;
   return <main className="app-shell">
-    <header className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5zM6 11v6c4 3 8 3 12 0v-6M22 9v7"/></svg></span><div><h1>Rord-Mai</h1><small>Your academic companion</small></div><span className="liff-label">LINE app</span></header>
+    <header className="brand"><svg className="brand-mark" viewBox="381 189 635 635" width="40" height="40" aria-hidden="true"><image href={rordmaiLogo} width="1359" height="1157" /></svg><div><h1>Rord-Mai</h1><small>Your academic companion</small></div><span className="liff-label">LINE app</span></header>
     {error && <p role="alert" className="error">{error}</p>}
     {notice && <p role="status">{notice}</p>}
     {!ready && !error && <p role="status">Connecting securely to LINE…</p>}
