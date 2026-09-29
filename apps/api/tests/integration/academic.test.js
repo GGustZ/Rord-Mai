@@ -12,7 +12,7 @@ const service=createAcademicService({consentService:consent});
 const a={lineUserId:'academic-a'},b={lineUserId:'academic-b'},outsider={lineUserId:'outsider'};
 const input=()=>({courseCode:'TEST',courseName:'Fictional mathematics',sectionNumber:'1',academicYear:2026,semester:1,credits:3,
   gradingMode:'criterion',withdrawalDeadline:'2026-10-15',gradeThresholds:{A:80,'B+':75,B:70,'C+':65,C:60,'D+':55,D:50},
-  components:[{name:'Midterm',weightPercent:40,maximumScore:100},{name:'Final',weightPercent:60,maximumScore:100}]});
+  components:[{name:'Midterm',weightPercent:40,maximumScore:100,inputType:'marks'},{name:'Final',weightPercent:60,maximumScore:100,inputType:'marks'}]});
 const grant=identity=>consent.grantStorageConsent({identity,accepted:true,policyVersion:'v1'});
 let created,joined;
 beforeAll(async()=>{await migrate(pool);});
@@ -28,7 +28,7 @@ const revisions=(expectedRevision=1)=>({expectedRevision,components:created.sect
 test('creation inserts ordered components and creator enrolment; shared rules vary independently',async()=>{
   expect(created.section.canEdit).toBe(true);expect(created.section.components.map(c=>c.name)).toEqual(['Midterm','Final']);
   expect((await service.getSection({identity:b,sectionId:created.section.id})).canEdit).toBe(false);
-  const second=await service.createSection({identity:a,input:{...input(),gradingMode:'norm',gradeThresholds:null,components:[{name:'Work',weightPercent:100,maximumScore:50}]}});
+  const second=await service.createSection({identity:a,input:{...input(),gradingMode:'norm',gradeThresholds:null,components:[{name:'Work',weightPercent:100,maximumScore:50,inputType:'marks'}]}});
   expect(second.section.gradingMode).toBe('norm');
   expect((await service.getSection({identity:a,sectionId:created.section.id})).gradingMode).toBe('criterion');
 });
@@ -82,6 +82,8 @@ test.each([
   x=>{x.components[0].id='00000000-0000-0000-0000-000000000000';},
   x=>{x.components[0].weightPercent=30.001;x.components[1].weightPercent=69.999;},
   x=>{x.components[0].maximumScore=200;},
+  x=>{x.components[0].inputType='score';},
+  x=>{x.components[0].inputType=null;},
 ])('invalid revision fails without partial changes (%#)',async mutate=>{
   const data=revisions();mutate(data);
   await expect(service.reviseWeights({identity:a,sectionId:created.section.id,input:data})).rejects.toMatchObject({status:400});
@@ -119,14 +121,58 @@ test('foreign component cannot be used for a score or deletion',async()=>{
   await expect(write(a,created.enrollment.id,50,other.section.components[0].id)).rejects.toMatchObject({status:400});
   await expect(service.writeComponent({identity:a,enrollmentId:created.enrollment.id,componentId:other.section.components[0].id,kind:'score',remove:true})).rejects.toMatchObject({status:400});
 });
-test('attendance derives score and requires explicit source deletion',async()=>{
+test('attendance derives score only for attendance assessments',async()=>{
   const args={identity:a,enrollmentId:created.enrollment.id,componentId:created.section.components[0].id};
+  await service.reviseWeights({identity:a,sectionId:created.section.id,input:{expectedRevision:1,components:created.section.components.map((c,i)=>({id:c.id,weightPercent:c.weightPercent,inputType:i?'marks':'attendance'}))}});
   await service.writeComponent({...args,kind:'attendance',input:{attended:8,totalSessions:10}});
   expect((await service.summary({identity:a,enrollmentId:args.enrollmentId})).currentWeightedScore).toBe(32);
-  await expect(write(a,args.enrollmentId,90)).rejects.toMatchObject({code:'ATTENDANCE_SOURCE_EXISTS'});
+  await expect(write(a,args.enrollmentId,90)).rejects.toMatchObject({code:'ASSESSMENT_INPUT_TYPE_MISMATCH'});
   await service.writeComponent({...args,kind:'attendance',remove:true});
-  await write(a,args.enrollmentId,90);
-  await expect(service.writeComponent({...args,kind:'attendance',input:{attended:8,totalSessions:10}})).rejects.toMatchObject({code:'SCORE_SOURCE_EXISTS'});
+  expect((await service.summary({identity:a,enrollmentId:args.enrollmentId})).gradedWeightPercent).toBe(0);
+  await expect(write(a,args.enrollmentId,90)).rejects.toMatchObject({code:'ASSESSMENT_INPUT_TYPE_MISMATCH'});
+  await expect(service.writeComponent({...args,componentId:created.section.components[1].id,kind:'attendance',input:{attended:8,totalSessions:10}})).rejects.toMatchObject({code:'ASSESSMENT_INPUT_TYPE_MISMATCH'});
+});
+
+test('legacy classification preserves entries and requires creator, all types and current revision',async()=>{
+  await write(a,created.enrollment.id,80);
+  // Simulate an older course, including attendance entered against an exam.
+  await pool.query('UPDATE components SET input_type=NULL WHERE section_id=$1',[created.section.id]);
+  await pool.query('INSERT INTO attendance(enrollment_id,component_id,section_id,attended,total_sessions) VALUES ($1,$2,$3,8,10)',[joined.id,created.section.components[0].id,created.section.id]);
+  expect((await service.getSection({identity:a,sectionId:created.section.id})).components.every(c=>c.inputType===null)).toBe(true);
+  await expect(write(a,created.enrollment.id,90)).rejects.toMatchObject({code:'ASSESSMENT_TYPES_REQUIRED'});
+  await expect(service.reviseWeights({identity:a,sectionId:created.section.id,input:revisions()})).rejects.toMatchObject({code:'ASSESSMENT_TYPES_REQUIRED'});
+  const revision={expectedRevision:1,components:created.section.components.map(c=>({id:c.id,weightPercent:c.weightPercent,inputType:'marks'}))};
+  await expect(service.reviseWeights({identity:b,sectionId:created.section.id,input:revision})).rejects.toMatchObject({code:'CREATOR_REQUIRED'});
+  await expect(service.reviseWeights({identity:a,sectionId:created.section.id,input:{...revision,expectedRevision:2}})).rejects.toMatchObject({code:'REVISION_CONFLICT'});
+  const before=(await pool.query('SELECT * FROM attendance')).rows;
+  await service.reviseWeights({identity:a,sectionId:created.section.id,input:revision});
+  expect((await pool.query('SELECT * FROM attendance')).rows).toEqual(before);
+  expect((await service.summary({identity:a,enrollmentId:created.enrollment.id})).currentWeightedScore).toBe(32);
+  expect((await service.summary({identity:b,enrollmentId:joined.id})).currentWeightedScore).toBe(32);
+  await expect(write(b,joined.id,90)).rejects.toMatchObject({code:'ATTENDANCE_SOURCE_EXISTS'});
+  await service.writeComponent({identity:b,enrollmentId:joined.id,componentId:created.section.components[0].id,kind:'attendance',remove:true});
+  await write(b,joined.id,90);
+  expect((await service.summary({identity:b,enrollmentId:joined.id})).currentWeightedScore).toBe(36);
+  const audit=(await pool.query('SELECT previous_weights,new_weights FROM grading_revisions')).rows[0];
+  expect(audit.previous_weights[0].inputType).toBeNull(); expect(audit.new_weights[0].inputType).toBe('marks');
+});
+
+test('a confirmed assessment cannot accept entries while another assessment remains unclassified; deletion stays available',async()=>{
+  await write(a,created.enrollment.id,80);
+  await pool.query('UPDATE components SET input_type=NULL WHERE id=$1',[created.section.components[1].id]);
+  await expect(write(a,created.enrollment.id,90)).rejects.toMatchObject({code:'ASSESSMENT_TYPES_REQUIRED'});
+  await service.writeComponent({identity:a,enrollmentId:created.enrollment.id,componentId:created.section.components[0].id,kind:'score',remove:true});
+  expect((await service.detail({identity:a,enrollmentId:created.enrollment.id})).scores).toEqual([]);
+});
+
+test('reclassifying marks as attendance preserves the old marks until explicit deletion',async()=>{
+  await write(a,created.enrollment.id,80);
+  await service.reviseWeights({identity:a,sectionId:created.section.id,input:{expectedRevision:1,components:created.section.components.map((c,i)=>({id:c.id,weightPercent:c.weightPercent,inputType:i?'marks':'attendance'}))}});
+  const args={identity:a,enrollmentId:created.enrollment.id,componentId:created.section.components[0].id,kind:'attendance',input:{attended:8,totalSessions:10}};
+  await expect(service.writeComponent(args)).rejects.toMatchObject({code:'SCORE_SOURCE_EXISTS'});
+  expect((await service.summary({identity:a,enrollmentId:created.enrollment.id})).currentWeightedScore).toBe(32);
+  await service.writeComponent({...args,kind:'score',remove:true});
+  await service.writeComponent(args);
 });
 test.each([{attended:-1,totalSessions:10},{attended:1.5,totalSessions:10},{attended:0,totalSessions:0},{attended:11,totalSessions:10}])('invalid attendance rejected: %j',async input=>{
   await expect(service.writeComponent({identity:a,enrollmentId:created.enrollment.id,componentId:created.section.components[0].id,kind:'attendance',input})).rejects.toMatchObject({status:400});
@@ -160,6 +206,8 @@ test('real HTTP create/join/score/summary/revision flow uses verified identity',
   const data=made.body.data;
   expect((await req('post','/api/v1/sections/join','b').send({joinCode:data.section.joinCode})).status).toBe(201);
   expect((await req('put','/api/v1/enrollments/'+data.enrollment.id+'/scores/'+data.section.components[0].id).send({score:80})).status).toBe(200);
+  const wrong=await req('put','/api/v1/enrollments/'+data.enrollment.id+'/attendance/'+data.section.components[0].id).send({attended:8,totalSessions:10});
+  expect(wrong.status).toBe(409);expect(wrong.body.error.code).toBe('ASSESSMENT_INPUT_TYPE_MISMATCH');
   expect((await req('get','/api/v1/enrollments/'+data.enrollment.id+'/summary')).body.data.currentWeightedScore).toBe(32);
   expect((await req('get','/api/v1/enrollments/'+data.enrollment.id,'b')).status).toBe(404);
 });

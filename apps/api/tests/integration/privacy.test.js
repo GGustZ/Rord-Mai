@@ -30,16 +30,16 @@ const fixture = async () => {
 };
 test('migrations rerun without applying versions again', async () => {
   expect(await migrate(pool)).toEqual([]);
-  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(4);
+  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(5);
 });
 test('migration down/reapply succeeds in a separate disposable schema', async () => {
   const client = await pool.connect();
   try {
     await client.query('CREATE SCHEMA rollback_check');
     await client.query('SET search_path TO rollback_check');
-    for (const file of ['001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql',
-      '004_component_order.down.sql','003_privacy_lifecycle.down.sql','002_storage_consent.down.sql','001_core.down.sql',
-      '001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql']) {
+    for (const file of ['001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql','005_assessment_input_type.up.sql',
+      '005_assessment_input_type.down.sql','004_component_order.down.sql','003_privacy_lifecycle.down.sql','002_storage_consent.down.sql','001_core.down.sql',
+      '001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql','005_assessment_input_type.up.sql']) {
       await client.query(normaliseSql(await fs.readFile(path.resolve(__dirname, '../../../../migrations',file),'utf8')));
     }
     expect((await client.query('SELECT * FROM students')).rows).toEqual([]);
@@ -47,6 +47,30 @@ test('migration down/reapply succeeds in a separate disposable schema', async ()
     await client.query('SET search_path TO public');
     await client.query('DROP SCHEMA rollback_check CASCADE');
     client.release();
+  }
+});
+test('assessment-type migration preserves existing entries and leaves names unclassified', async () => {
+  const client=await pool.connect();
+  const sql=async file=>client.query(normaliseSql(await fs.readFile(path.resolve(__dirname,'../../../../migrations',file),'utf8')));
+  try {
+    await client.query('CREATE SCHEMA input_type_upgrade');
+    await client.query('SET search_path TO input_type_upgrade');
+    for(const file of ['001_core.up.sql','002_storage_consent.up.sql','003_privacy_lifecycle.up.sql','004_component_order.up.sql'])await sql(file);
+    const student=(await client.query("INSERT INTO students(line_user_id) VALUES ('migration-test') RETURNING id")).rows[0].id;
+    const section=(await client.query("INSERT INTO sections(join_code,course_code,course_name,section_number,academic_year,semester,credits,grading_mode,withdrawal_deadline) VALUES ('ABC123','TEST','Migration test','1',2026,1,3,'norm','2026-10-01') RETURNING id")).rows[0].id;
+    const components=(await client.query("INSERT INTO components(section_id,name,weight_percent,maximum_score) VALUES ($1,'Attendance',40,100),($1,'Assignment',60,50) RETURNING id",[section])).rows;
+    const enrollment=(await client.query('INSERT INTO enrollments(student_id,section_id) VALUES ($1,$2) RETURNING id',[student,section])).rows[0].id;
+    await client.query('INSERT INTO scores(enrollment_id,component_id,section_id,score) VALUES ($1,$2,$3,80)',[enrollment,components[0].id,section]);
+    await client.query('INSERT INTO attendance(enrollment_id,component_id,section_id,attended,total_sessions) VALUES ($1,$2,$3,8,10)',[enrollment,components[1].id,section]);
+    const scores=(await client.query('SELECT * FROM scores')).rows,attendance=(await client.query('SELECT * FROM attendance')).rows;
+    await sql('005_assessment_input_type.up.sql');
+    expect((await client.query('SELECT input_type FROM components')).rows).toEqual([{input_type:null},{input_type:null}]);
+    expect((await client.query('SELECT * FROM scores')).rows).toEqual(scores);
+    expect((await client.query('SELECT * FROM attendance')).rows).toEqual(attendance);
+    await expect(client.query("UPDATE components SET input_type='exam'")).rejects.toMatchObject({code:'23514'});
+  } finally {
+    await client.query('SET search_path TO public');
+    await client.query('DROP SCHEMA input_type_upgrade CASCADE');client.release();
   }
 });
 test('failed migration leaves no partial schema or applied marker', async () => {

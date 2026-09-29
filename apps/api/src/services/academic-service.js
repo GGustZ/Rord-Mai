@@ -14,7 +14,7 @@ const object = (value, keys) => {
 };
 const joinCode = () => Array.from({length:6},()=> 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[randomInt(36)]).join('');
 const enrollmentDto = (row) => ({id:row.id,sectionId:row.section_id,targetGrade:row.target_grade,repeat:null});
-const componentDto = (row) => ({id:row.id,name:row.name,weightPercent:Number(row.weight_percent),maximumScore:Number(row.maximum_score)});
+const componentDto = (row) => ({id:row.id,name:row.name,weightPercent:Number(row.weight_percent),maximumScore:Number(row.maximum_score),inputType:row.input_type});
 const readSection = async (client, sectionId, studentId, lock = false) => {
   // Internal callers provide only a boolean; SQL query text never includes caller-provided identifiers.
   const sql = lock ?
@@ -57,8 +57,8 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
       }
       if(!sectionId) throw fail('JOIN_CODE_UNAVAILABLE');
       for(const [position,c] of data.components.entries()) await client.query(
-        'INSERT INTO components(section_id,name,weight_percent,maximum_score,position) VALUES ($1,$2,$3,$4,$5)',
-        [sectionId,c.name,c.weightPercent,c.maximumScore,position]);
+        'INSERT INTO components(section_id,name,weight_percent,maximum_score,position,input_type) VALUES ($1,$2,$3,$4,$5,$6)',
+        [sectionId,c.name,c.weightPercent,c.maximumScore,position,c.inputType]);
       const row=(await client.query('INSERT INTO enrollments(student_id,section_id) VALUES ($1,$2) RETURNING *',[studentId,sectionId])).rows[0];
       return {section:(await readSection(client,sectionId,studentId)).section,enrollment:enrollmentDto(row)};
     });
@@ -85,7 +85,8 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
     if(!Number.isInteger(input.expectedRevision)||input.expectedRevision<1||!Array.isArray(input.components)||!input.components.length||input.components.length>30) throw fail('VALIDATION_ERROR');
     const ids=new Set();let units=0;
     for(const c of input.components) {
-      object(c,['id','weightPercent']);uuid(c.id);
+      object(c,['id','weightPercent','inputType']);uuid(c.id);
+      if(Object.hasOwn(c,'inputType')&&!['marks','attendance'].includes(c.inputType)) throw fail('VALIDATION_ERROR');
       if(ids.has(c.id)||!Number.isFinite(c.weightPercent)||c.weightPercent<=0||c.weightPercent>100||
         Math.abs(c.weightPercent*100-Math.round(c.weightPercent*100))>1e-8) throw fail('VALIDATION_ERROR');
       ids.add(c.id);units+=Math.round(c.weightPercent*100);
@@ -96,12 +97,15 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
       if(creatorId!==studentId) throw fail('CREATOR_REQUIRED');
       if(section.structureRevision!==input.expectedRevision) throw fail('REVISION_CONFLICT');
       if(section.components.length!==ids.size||section.components.some(c=>!ids.has(c.id))) throw fail('VALIDATION_ERROR');
-      const previous=section.components.map(c=>({id:c.id,weightPercent:c.weightPercent}));
-      for(const c of input.components) await client.query('UPDATE components SET weight_percent=$1 WHERE id=$2 AND section_id=$3',[c.weightPercent,c.id,sectionId]);
+      // Older weight-only clients retain confirmed types; unclassified sections need all types supplied.
+      const revised=input.components.map(c=>({...c,inputType:c.inputType??section.components.find(old=>old.id===c.id).inputType}));
+      if(revised.some(c=>!c.inputType)) throw fail('ASSESSMENT_TYPES_REQUIRED');
+      const previous=section.components.map(c=>({id:c.id,weightPercent:c.weightPercent,inputType:c.inputType}));
+      for(const c of revised) await client.query('UPDATE components SET weight_percent=$1,input_type=$2 WHERE id=$3 AND section_id=$4',[c.weightPercent,c.inputType,c.id,sectionId]);
       const revision=section.structureRevision+1;
       await client.query('UPDATE sections SET structure_revision=$1,updated_at=CURRENT_TIMESTAMP WHERE id=$2',[revision,sectionId]);
       await client.query('INSERT INTO grading_revisions(section_id,revision,actor_id,previous_weights,new_weights) VALUES ($1,$2,$3,$4,$5)',
-        [sectionId,revision,studentId,JSON.stringify(previous),JSON.stringify(input.components)]);
+        [sectionId,revision,studentId,JSON.stringify(previous),JSON.stringify(revised)]);
       return (await readSection(client,sectionId,studentId)).section;
     });
   };
@@ -165,6 +169,8 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
           'DELETE FROM attendance WHERE enrollment_id=$1 AND component_id=$2',[enrollmentId,componentId]);
         return;
       }
+      if(section.components.some(c=>!c.inputType)) throw fail('ASSESSMENT_TYPES_REQUIRED');
+      if(component.inputType!==(kind==='score'?'marks':'attendance')) throw fail('ASSESSMENT_INPUT_TYPE_MISMATCH');
       if(kind==='score') {
         if(input.score>component.maximumScore) throw fail('VALIDATION_ERROR');
         if((await client.query('SELECT 1 FROM attendance WHERE enrollment_id=$1 AND component_id=$2',[enrollmentId,componentId])).rows.length) throw fail('ATTENDANCE_SOURCE_EXISTS');

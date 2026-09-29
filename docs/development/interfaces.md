@@ -19,6 +19,8 @@ DELETE /api/v1/me/data requires JSON {confirmDeletion:true}, then returns 204.
 This explicit request confirmation is an intentional contract amendment.
 All private responses use Cache-Control: no-store.
 
+Assessment input types: section creation supplies inputType:marks|attendance for every component. The entry screen shows only that method, with no method tabs. Creator grading-structure updates can confirm or correct types alongside weights. Migration 005 leaves existing assessments unclassified, preserving entries and results. New entries wait for every type to be confirmed; incompatible old entries require explicit student deletion before correction. Deletion is available even before classification. LINE chat records marks only and sends attendance and unclassified assessments to LIFF.
+
 ## Engine
 
 Pure CommonJS package at packages/engine; API adapter at apps/api/src/adapters/engine.js.

@@ -15,7 +15,7 @@ const a = { lineUserId: 'U' + 'a'.repeat(32) }, b = { lineUserId: 'U' + 'b'.repe
 const grant = identity => consent.grantStorageConsent({ identity, accepted: true, policyVersion: 'v1' });
 const input = () => ({ courseCode: 'TEST', courseName: 'Fictional mathematics', sectionNumber: '1', academicYear: 2026, semester: 1, credits: 3,
   gradingMode: 'criterion', withdrawalDeadline: '2026-10-15', gradeThresholds: { A: 80, 'B+': 75, B: 70, 'C+': 65, C: 60, 'D+': 55, D: 50 },
-  components: [{ name: 'Midterm', weightPercent: 40, maximumScore: 100 }, { name: 'Final', weightPercent: 60, maximumScore: 100 }] });
+  components: [{ name: 'Midterm', weightPercent: 40, maximumScore: 100,inputType:'marks' }, { name: 'Final', weightPercent: 60, maximumScore: 100,inputType:'marks' }] });
 let chat, messaging, created, joined, sequence;
 const event = (text, identity = a) => ({ type: 'message', message: { type: 'text', text }, source: { type: 'user', userId: identity.lineUserId },
   timestamp: Date.now() + ++sequence, webhookEventId: randomUUID(), replyToken: randomUUID() });
@@ -120,7 +120,7 @@ test('CHAT-006: deleted enrollment cancels stale selection without a write', asy
 test('CHAT-008: later pages expose all courses and assessments', async () => {
   for (let i = 0; i < 8; i++) await academic.createSection({ identity: a, input: { ...input(), courseCode: 'PAGE' + i } });
   await send('score'); expect(lastReply()).toContain('next'); await send('next'); expect(lastReply()).toContain('PAGE7');
-  const many = await academic.createSection({ identity: b, input: { ...input(), components: Array.from({ length: 10 }, (_, i) => ({ name: 'Part ' + (i + 1), weightPercent: 10, maximumScore: 100 })) } });
+  const many = await academic.createSection({ identity: b, input: { ...input(), components: Array.from({ length: 10 }, (_, i) => ({ name: 'Part ' + (i + 1), weightPercent: 10, maximumScore: 100,inputType:'marks' })) } });
   await send('score', b); await send('2', b); await send('next', b); expect(lastReply()).toContain('Part 10');
   await send('2', b); await send('30', b); await send('confirm', b);
   expect((await detail(b, many.enrollment.id)).scores[0].componentId).toBe(many.section.components[9].id);
@@ -158,9 +158,22 @@ test('chat summaries reflect LIFF scores, targets and norm limitations', async (
   await send('summary'); await send('2'); expect(lastReply()).toContain('Norm grading');
 });
 test('attendance source remains protected through chat', async () => {
-  await academic.writeComponent({ identity: a, enrollmentId: created.enrollment.id, componentId: created.section.components[0].id, kind: 'attendance', input: { attended: 1, totalSessions: 2 } });
+  await pool.query('INSERT INTO attendance(enrollment_id,component_id,section_id,attended,total_sessions) VALUES ($1,$2,$3,1,2)',[created.enrollment.id,created.section.components[0].id,created.section.id]);
   await send('score'); await send('1'); await send('1'); expect(lastReply()).toContain('attendance');
   expect((await detail()).scores).toEqual([]);
+});
+test('attendance assessments without entries direct to LIFF; names do not determine type', async () => {
+  await academic.reviseWeights({identity:a,sectionId:created.section.id,input:{expectedRevision:1,components:created.section.components.map((c,i)=>({id:c.id,weightPercent:c.weightPercent,inputType:i?'marks':'attendance'}))}});
+  await send('score');await send('1');await send('1');expect(lastReply()).toContain('attended sessions');expect(lastReply()).toContain('https://liff.line.me/123-test');
+  await send('80');await send('confirm');expect((await detail()).scores).toEqual([]);
+});
+test('unclassified course and a reclassified chat draft cannot accept marks', async () => {
+  await pool.query('UPDATE components SET input_type=NULL WHERE id=$1',[created.section.components[1].id]);
+  await send('score');await send('1');await send('1');expect(lastReply()).toContain('creator must confirm assessment types');
+  await academic.reviseWeights({identity:a,sectionId:created.section.id,input:{expectedRevision:1,components:created.section.components.map(c=>({id:c.id,weightPercent:c.weightPercent,inputType:'marks'}))}});
+  await draft();
+  await academic.reviseWeights({identity:a,sectionId:created.section.id,input:{expectedRevision:2,components:created.section.components.map((c,i)=>({id:c.id,weightPercent:c.weightPercent,inputType:i?'marks':'attendance'}))}});
+  await send('confirm');expect(lastReply()).toContain('changed');expect((await detail()).scores).toEqual([]);
 });
 test('QUEUE-001: signed HTTP receipt acknowledges durable job without downstream processing', async () => {
   const secret = 'test-secret', e = event('score');

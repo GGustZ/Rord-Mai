@@ -1,7 +1,7 @@
 const { request, createApp } = require('./helpers/authenticated-app');
 const { validateCreateSection } = require('../src/lib/validate-create-section');
 
-const fixture = () => ({ courseCode: ' EN123 ', courseName: 'Example', sectionNumber: '1', academicYear: 2026, semester: 1, credits: 3, gradingMode: 'criterion', withdrawalDeadline: '2026-10-30', gradeThresholds: { A: 80, 'B+': 75, B: 70, 'C+': 65, C: 60, 'D+': 55, D: 50 }, components: [{ name: 'Work', weightPercent: 60, maximumScore: 120 }, { name: 'Final', weightPercent: 40, maximumScore: 80 }] });
+const fixture = () => ({ courseCode: ' EN123 ', courseName: 'Example', sectionNumber: '1', academicYear: 2026, semester: 1, credits: 3, gradingMode: 'criterion', withdrawalDeadline: '2026-10-30', gradeThresholds: { A: 80, 'B+': 75, B: 70, 'C+': 65, C: 60, 'D+': 55, D: 50 }, components: [{ name: 'Work', weightPercent: 60, maximumScore: 120,inputType:'marks' }, { name: 'Final', weightPercent: 40, maximumScore: 80,inputType:'marks' }] });
 
 test('normalizes without mutating input', () => {
   const input = fixture();
@@ -21,6 +21,8 @@ test.each([
   ['numeric string', (x) => { x.credits = '3'; }],
   ['nonfinite maximum', (x) => { x.components[0].maximumScore = Infinity; }],
   ['null component', (x) => { x.components[0] = null; }],
+  ['missing input type', (x) => { delete x.components[0].inputType; }],
+  ['invalid input type', (x) => { x.components[0].inputType = 'assignment'; }],
   ['norm thresholds', (x) => { x.gradingMode = 'norm'; }],
 ])('rejects %s', (_name, mutate) => {
   const input = fixture(); mutate(input);
@@ -33,8 +35,15 @@ test.each([null, [], 5, 'hello', {}])('rejects malformed section shape %p', (inp
 
 test('accepts norm without thresholds and exact decimal weights', () => {
   const input = fixture(); input.gradingMode = 'norm'; input.gradeThresholds = null;
-  input.components = [33.33, 33.33, 33.34].map((weightPercent) => ({ name: 'Work', weightPercent, maximumScore: 100 }));
+  input.components = [33.33, 33.33, 33.34].map((weightPercent) => ({ name: 'Work', weightPercent, maximumScore: 100,inputType:'marks' }));
   expect(validateCreateSection(input).success).toBe(true);
+});
+
+test('input type is explicit and independent of the assessment name', () => {
+  const input = fixture();
+  input.components[0].name = 'Participation'; input.components[0].inputType = 'attendance';
+  input.components[1].name = 'Attendance';
+  expect(validateCreateSection(input).data.components.map(c => c.inputType)).toEqual(['attendance','marks']);
 });
 
 test('create route validates then invokes the section service', async () => {

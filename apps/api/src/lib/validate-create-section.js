@@ -50,8 +50,9 @@ const validateCreateSection = (input) => {
     data.components = input.components.map((component, index) => {
       const path = `components.${index}`;
       if (!isObject(component)) { add(path, 'Expected an object.'); validWeights = false; return component; }
-      keys(component, ['name', 'weightPercent', 'maximumScore'], `${path}.`);
+      keys(component, ['name', 'weightPercent', 'maximumScore', 'inputType'], `${path}.`);
       const name = text(component.name, 100, `${path}.name`);
+      if (!['marks', 'attendance'].includes(component.inputType)) add(`${path}.inputType`, 'Expected marks or attendance.');
       const weight = component.weightPercent;
       const units = Math.round(weight * 100);
       // Tolerance handles binary representation, not a shortfall in the total.
@@ -60,7 +61,7 @@ const validateCreateSection = (input) => {
         validWeights = false;
       } else total += units;
       if (!Number.isFinite(component.maximumScore) || component.maximumScore <= 0) add(`${path}.maximumScore`, 'Expected a finite positive number.');
-      return { name, weightPercent: weight, maximumScore: component.maximumScore };
+      return { name, weightPercent: weight, maximumScore: component.maximumScore, inputType: component.inputType };
     });
     if (validWeights && total !== 10000) add('components', `Weights must total 100 percent; received ${total / 100}.`);
   }

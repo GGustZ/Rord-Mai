@@ -63,7 +63,7 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
       const { section } = await academic.detail({ enrollmentId });
       const page = section.components.slice(offset, offset + PAGE_SIZE);
       return result({ phase: 'component', enrollmentId, offset, items: page.map(c => c.id) },
-        'Choose an assessment by number:\n' + page.map((c, i) => `${i + 1}. ${c.name} (max ${c.maximumScore})`).join('\n') +
+        'Choose an assessment by number:\n' + page.map((c, i) => `${i + 1}. ${c.name} (${c.inputType==='attendance'?'attendance in LIFF':!c.inputType?'type confirmation needed':`max ${c.maximumScore}`})`).join('\n') +
         (offset + PAGE_SIZE < section.components.length ? '\nSend next for more.' : '') + '\nSend cancel to stop.');
     };
     if (command === 'cancel') return result({}, 'Draft cancelled. Confirmed scores are unchanged.');
@@ -97,8 +97,14 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
       const componentId = state.items[choice];
       const component = detail.section.components.find(c => c.id === componentId);
       if (!component) return result(state, 'Choose a listed assessment number, next if available, or cancel.');
+      if (detail.section.components.some(c => !c.inputType)) {
+        return result({}, 'The section creator must confirm assessment types before new entries can be saved. Open LIFF: ' + appUrl);
+      }
+      if (component.inputType === 'attendance') {
+        return result({}, 'Record attended sessions and total sessions for this assessment in LIFF: ' + appUrl);
+      }
       if (detail.attendance.some(a => a.componentId === componentId)) {
-        return result({}, 'This assessment uses attendance. Remove its attendance entry in LIFF before entering raw marks: ' + appUrl);
+        return result({}, 'This marks assessment has an old attendance entry. Its result is preserved. Clear that entry in LIFF before entering the real marks: ' + appUrl);
       }
       const existing = detail.scores.find(s => s.componentId === componentId);
       return result({ phase: 'score', enrollmentId: state.enrollmentId, componentId,
