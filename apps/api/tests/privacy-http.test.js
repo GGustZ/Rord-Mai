@@ -27,7 +27,7 @@ test('consent read requires verified identity', async () => {
 test('grant passes only verified identity to service', async () => {
   const response = await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: false, policyVersion: 'v1' });
   expect(response.status).toBe(200);
-  expect(service.grantStorageConsent).toHaveBeenCalledWith({ identity: { lineUserId: 'trusted' }, accepted: true, policyVersion: 'v1' });
+  expect(service.grantStorageConsent).toHaveBeenCalledWith({ identity: { lineUserId: 'trusted' }, accepted: true, policyVersion: 'v1',crossBorderExplanation:false });
 });
 test.each([
   { storage: 'true', crossBorderExplanation: false, policyVersion: 'v1' },
@@ -38,8 +38,10 @@ test.each([
   expect(response.status).toBe(400);
   expect(service.grantStorageConsent).not.toHaveBeenCalled();
 });
-test('external explanation feature remains disabled', async () => {
-  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: true, policyVersion: 'v1' })).status).toBe(409);
+test('external explanation consent is independent and requires storage', async () => {
+  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: true, policyVersion: 'v1' })).status).toBe(200);
+  expect(service.grantStorageConsent).toHaveBeenCalledWith(expect.objectContaining({crossBorderExplanation:true}));
+  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: false, crossBorderExplanation: true, policyVersion: 'v1',confirmDeletion:true })).status).toBe(400);
 });
 test('withdrawal requires confirmation and then invokes deletion', async () => {
   const body = { storage: false, crossBorderExplanation: false, policyVersion: 'v1' };

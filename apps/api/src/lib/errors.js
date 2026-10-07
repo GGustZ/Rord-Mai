@@ -18,6 +18,14 @@ const messages = {
   FEATURE_UNAVAILABLE: [409, 'External explanation consent is not available in this release.'],
   RESOURCE_NOT_FOUND: [404, 'The requested resource does not exist.'],
   DATABASE_UNAVAILABLE: [503, 'The database is temporarily unavailable.'],
+  PROFILE_REQUIRED: [409, 'Save your cumulative GPA and counted credits before calculating GPAX.'],
+  REPEAT_RULE_UNVERIFIED: [422, 'The official repeat-course rule has not been verified. Repeat GPAX calculations are unavailable.'],
+  TARGET_REQUIRED: [409, 'Save a target grade before requesting a target explanation.'],
+  OCR_UNAVAILABLE: [503, 'Syllabus recognition is unavailable. Enter the grading structure manually.'],
+  OCR_BUSY: [503, 'Another syllabus is being read. Please retry shortly.'],
+  EXTRACTION_FAILED: [422, 'No usable grading table was found. Try a clearer image or enter the structure manually.'],
+  IMAGE_REQUIRED: [415, 'Upload one valid PNG or JPEG image. PDF and other formats are not supported.'],
+  IMAGE_TOO_LARGE: [413, 'Use an image no larger than 5 MiB and 10 megapixels.'],
 };
 const fail = (code) => {
   const [status, message] = messages[code];

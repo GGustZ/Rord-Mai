@@ -41,5 +41,12 @@ test('reply adapter uses only reply API and never exposes provider details on fa
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   const [url, options] = fetchImpl.mock.calls[0];
   expect(url).toBe('https://api.line.me/v2/bot/message/reply');
-  expect(JSON.parse(options.body)).toEqual({ replyToken: 'reply-token', messages: [{ type: 'text', text: 'Saved' }] });
+  const body=JSON.parse(options.body);
+  expect(body.replyToken).toBe('reply-token');expect(body.messages[0].text).toBe('Saved');
+  expect(body.messages[0].quickReply.items.map(item=>item.action.text)).toEqual(['score','summary','cancel']);
+});
+test('native quick replies route numbered selections and confirmation through the existing message flow',()=>{
+  const {quickReplies}=require('../src/adapters/line-messaging');
+  expect(quickReplies('Choose a course:\n1. TEST Fictional course\n2. MATH Fictional math\nSend next for more.').items.map(item=>item.action.text)).toEqual(['1','2','score','summary','cancel','next']);
+  expect(quickReplies('Send confirm to save, edit to change, or cancel.').items.map(item=>item.action.text)).toContain('confirm');
 });

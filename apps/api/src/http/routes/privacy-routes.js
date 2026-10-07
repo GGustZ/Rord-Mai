@@ -13,9 +13,10 @@ const createPrivacyRouter = (service) => {
         typeof body.storage !== 'boolean' || typeof body.crossBorderExplanation !== 'boolean' ||
         typeof body.policyVersion !== 'string' ||
         (body.confirmDeletion !== undefined && typeof body.confirmDeletion !== 'boolean')) throw fail('VALIDATION_ERROR');
-    if (body.crossBorderExplanation) throw fail('FEATURE_UNAVAILABLE');
+    if (!body.storage && body.crossBorderExplanation) throw fail('VALIDATION_ERROR');
     if (body.storage) {
-      await service.grantStorageConsent({ identity: req.identity, accepted: true, policyVersion: body.policyVersion });
+      await service.grantStorageConsent({ identity: req.identity, accepted: true, policyVersion: body.policyVersion,
+        crossBorderExplanation:body.crossBorderExplanation });
     } else {
       // Explicit confirmation is required even for repeated withdrawal. Initial decline stays in the UI.
       if (body.confirmDeletion !== true) throw fail('CONFIRMATION_REQUIRED');

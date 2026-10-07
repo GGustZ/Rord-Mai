@@ -118,7 +118,8 @@ See [the case catalogue](testing/test-cases.md) for individual scenarios and exp
 | `docs/database/design.md` | Explains the five-table design, relationships, type choices, integrity rules, and later application/schema responsibilities. It is a design note, not proof of current feature completion. |
 | `docs/database/storage-consent.md` | Explains the consent service, migrations, manual checks, integration requirements, and remaining PRV-01 work. |
 | `docs/database/diagrams/ERD.drawio` | Editable diagrams.net source for the entity-relationship diagram. Update this source when maintaining the diagram. |
-| `docs/database/diagrams/ERD.png` | Image export of the ER diagram for viewing and sharing. Regenerate from the editable source after diagram changes; the image itself is not an executable schema. |
+| `docs/database/diagrams/ERD.svg` | Current vector schema view, refreshed from the verified 12-table database after migration 006. The editable Draw.io file contains the graph connections. |
+| `docs/database/diagrams/ERD.png` | Historical pre-006 image export, retained for earlier presentation evidence. Use ERD.svg or ERD.drawio for the current schema. |
 
 Outside the repository, `Rord-Mai Project/Context/.$ERD.drawio.bkp` is a retained diagram-editor backup. It is not runtime code and is not included in this repository's commits. Its redundancy has not been established, so it was not deleted.
 

@@ -2,7 +2,8 @@
 const { randomInt } = require('node:crypto');
 const { fail } = require('../lib/errors');
 const { validateCreateSection } = require('../lib/validate-create-section');
-const { requireOwnedEnrollment } = require('../repositories/academic-repository');
+const { requireOwnedEnrollment, enrollmentDto } = require('../repositories/academic-repository');
+const { GRADE_POINTS } = require('../../../../packages/engine/src/gpax');
 const { courseSummary, targetCalculation } = require('../adapters/engine');
 const grades = ['A','B+','B','C+','C','D+','D'];
 const uuid = (value) => {
@@ -13,7 +14,6 @@ const object = (value, keys) => {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key=>!keys.includes(key))) throw fail('VALIDATION_ERROR');
 };
 const joinCode = () => Array.from({length:6},()=> 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[randomInt(36)]).join('');
-const enrollmentDto = (row) => ({id:row.id,sectionId:row.section_id,targetGrade:row.target_grade,repeat:null});
 const componentDto = (row) => ({id:row.id,name:row.name,weightPercent:Number(row.weight_percent),maximumScore:Number(row.maximum_score),inputType:row.input_type});
 const readSection = async (client, sectionId, studentId, lock = false) => {
   // Internal callers provide only a boolean; SQL query text never includes caller-provided identifiers.
@@ -35,6 +35,13 @@ const readSection = async (client, sectionId, studentId, lock = false) => {
     gradeThresholds:thresholds,components,structureRevision:row.structure_revision,canEdit:row.creator_id===studentId,
   }, creatorId:row.creator_id};
 };
+const calculationInput = (d)=> ({
+  gradingMode:d.section.gradingMode,gradeThresholds:d.section.gradeThresholds,
+  components:d.section.components.map(c=>{
+    const s=d.scores.find(s=>s.componentId===c.id),a=d.attendance.find(a=>a.componentId===c.id);
+    return {...c,score:s?s.score:a?a.attended/a.totalSessions*c.maximumScore:null};
+  }),
+});
 const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
   const guarded = (identity,work) => consentService.withStorageConsent({identity},work);
   const createSection = async ({identity,input}) => {
@@ -120,14 +127,6 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
     uuid(enrollmentId);
     return guarded(identity,({client,studentId})=>detailInTransaction(client,studentId,enrollmentId));
   };
-  const calculationInput = (d)=> ({
-    gradingMode:d.section.gradingMode,gradeThresholds:d.section.gradeThresholds,
-    components:d.section.components.map(c=>{
-      const s=d.scores.find(s=>s.componentId===c.id);
-      const a=d.attendance.find(a=>a.componentId===c.id);
-      return {...c,score:s ? s.score : a ? a.attended/a.totalSessions*c.maximumScore : null};
-    }),
-  });
   const summary = async ({identity,enrollmentId,targetGrade})=>{
     uuid(enrollmentId);
     if(targetGrade!==undefined&&!grades.includes(targetGrade)) throw fail('VALIDATION_ERROR');
@@ -140,13 +139,19 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
     });
   };
   const updateTarget = async ({identity,enrollmentId,input})=>{
-    uuid(enrollmentId);object(input,['targetGrade']);
-    if(!Object.hasOwn(input,'targetGrade')||(input.targetGrade!==null&&!grades.includes(input.targetGrade))) throw fail('VALIDATION_ERROR');
+    uuid(enrollmentId);object(input,['targetGrade','repeat']);
+    if(!Object.keys(input).length || (Object.hasOwn(input,'targetGrade')&&input.targetGrade!==null&&!grades.includes(input.targetGrade))) throw fail('VALIDATION_ERROR');
+    if (input.repeat !== undefined && input.repeat !== null) {
+      object(input.repeat,['previousGradePoint']);
+      if (!Object.hasOwn(input.repeat,'previousGradePoint') || !Object.values(GRADE_POINTS).includes(input.repeat.previousGradePoint)) throw fail('VALIDATION_ERROR');
+    }
     return guarded(identity,async({client,studentId})=>{
       const row=await requireOwnedEnrollment(client,studentId,enrollmentId);
       const {section}=await readSection(client,row.section_id,studentId);
-      if(input.targetGrade!==null&&section.gradingMode==='norm') throw fail('NORM_GRADE_UNAVAILABLE');
-      return enrollmentDto((await client.query('UPDATE enrollments SET target_grade=$1 WHERE id=$2 RETURNING *',[input.targetGrade,enrollmentId])).rows[0]);
+      const targetGrade = Object.hasOwn(input,'targetGrade') ? input.targetGrade : row.target_grade;
+      if(targetGrade!==null&&section.gradingMode==='norm') throw fail('NORM_GRADE_UNAVAILABLE');
+      const previous = Object.hasOwn(input,'repeat') ? input.repeat?.previousGradePoint ?? null : row.previous_grade_point;
+      return enrollmentDto((await client.query('UPDATE enrollments SET target_grade=$1,previous_grade_point=$2 WHERE id=$3 RETURNING *',[targetGrade,previous,enrollmentId])).rows[0]);
     });
   };
   const writeComponent = async ({identity,enrollmentId,componentId,input,kind,remove=false})=>{
@@ -188,4 +193,4 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
   };
   return {createSection,joinSection,getSection,reviseWeights,detail,summary,updateTarget,writeComponent};
 };
-module.exports = {createAcademicService};
+module.exports = {createAcademicService, uuid, object, calculationInput};

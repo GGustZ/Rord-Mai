@@ -1,5 +1,7 @@
 # Rord Mai
 
+7 October implementation adds cumulative profiles, ordinary GPAX scenarios, repeat metadata, independent explanation consent, complete Thai templates, optional verified-number Gemini wording, native LINE quick replies, deadline notifications and PNG/JPG-only syllabus drafts. Repeated-course GPAX is blocked until the official rule is verified. See [setup](docs/development/setup.md) and the [current contract](docs/api/contract.md). Local implementation does not establish live LINE/Gemini delivery, Docker execution or remote review gates.
+
 ## Project documentation
 
 Read the [folder rationale and file-by-file guide](docs/project-guide.md) first, then the [test-case catalogue and execution guide](docs/testing/test-cases.md).

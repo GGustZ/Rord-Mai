@@ -2,81 +2,81 @@
 <diagram name="Current physical schema">
 <mxGraphModel grid="1" page="1" pageWidth="1980" pageHeight="2530">
 <root>
-<mxCell id="0"/>
-<mxCell id="1" parent="0"/>
-<mxCell id="students" value="&lt;b&gt;students&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;line_user_id: text&lt;br/&gt;created_at: timestamptz&lt;br/&gt;updated_at: timestamptz&lt;br/&gt;storage_consent: bool&lt;br/&gt;storage_policy_version: text ?&lt;br/&gt;storage_consented_at: timestamptz ?" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="60" y="100" width="560" height="239" as="geometry"/>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="students" value="&lt;b&gt;students&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;line_user_id: text&lt;br/&gt;created_at: timestamptz&lt;br/&gt;updated_at: timestamptz&lt;br/&gt;storage_consent: bool&lt;br/&gt;storage_policy_version: text ?&lt;br/&gt;storage_consented_at: timestamptz ?&lt;br/&gt;cross_border_explanation: bool&lt;br/&gt;explanation_consented_at: timestamptz ?" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
+<mxGeometry x="60" y="100" width="560" height="289" as="geometry" />
 </mxCell>
 <mxCell id="sections" value="&lt;b&gt;sections&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;join_code: varchar&lt;br/&gt;course_code: varchar&lt;br/&gt;course_name: varchar&lt;br/&gt;section_number: varchar&lt;br/&gt;academic_year: int4&lt;br/&gt;semester: int4&lt;br/&gt;credits: int4&lt;br/&gt;grading_mode: text&lt;br/&gt;withdrawal_deadline: date&lt;br/&gt;a_min: numeric ?&lt;br/&gt;b_plus_min: numeric ?&lt;br/&gt;b_min: numeric ?&lt;br/&gt;c_plus_min: numeric ?&lt;br/&gt;c_min: numeric ?&lt;br/&gt;d_plus_min: numeric ?&lt;br/&gt;d_min: numeric ?&lt;br/&gt;created_at: timestamptz&lt;br/&gt;updated_at: timestamptz&lt;br/&gt;creator_id: uuid ?&lt;br/&gt;structure_revision: int4" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#E4F1E8;strokeColor=#547569;">
-<mxGeometry x="700" y="100" width="560" height="589" as="geometry"/>
+<mxGeometry x="700" y="100" width="560" height="589" as="geometry" />
 </mxCell>
-<mxCell id="components" value="&lt;b&gt;components&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;name: varchar&lt;br/&gt;weight_percent: numeric&lt;br/&gt;maximum_score: numeric&lt;br/&gt;position: int4" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#E4F1E8;strokeColor=#547569;">
-<mxGeometry x="1340" y="100" width="560" height="214" as="geometry"/>
+<mxCell id="components" value="&lt;b&gt;components&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;name: varchar&lt;br/&gt;weight_percent: numeric&lt;br/&gt;maximum_score: numeric&lt;br/&gt;position: int4&lt;br/&gt;input_type: text ?" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#E4F1E8;strokeColor=#547569;">
+<mxGeometry x="1340" y="100" width="560" height="239" as="geometry" />
 </mxCell>
-<mxCell id="enrollments" value="&lt;b&gt;enrollments&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;student_id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;target_grade: text ?&lt;br/&gt;created_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="60" y="850" width="560" height="189" as="geometry"/>
+<mxCell id="enrollments" value="&lt;b&gt;enrollments&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;student_id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;target_grade: text ?&lt;br/&gt;created_at: timestamptz&lt;br/&gt;previous_grade_point: numeric ?" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
+<mxGeometry x="60" y="850" width="560" height="214" as="geometry" />
 </mxCell>
 <mxCell id="scores" value="&lt;b&gt;scores&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;enrollment_id: uuid&lt;br/&gt;component_id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;score: numeric&lt;br/&gt;updated_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="700" y="850" width="560" height="214" as="geometry"/>
+<mxGeometry x="700" y="850" width="560" height="214" as="geometry" />
 </mxCell>
 <mxCell id="attendance" value="&lt;b&gt;attendance&lt;/b&gt;&lt;br/&gt;PK enrollment_id: uuid&lt;br/&gt;PK component_id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;attended: int4&lt;br/&gt;total_sessions: int4&lt;br/&gt;updated_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="1340" y="850" width="560" height="214" as="geometry"/>
+<mxGeometry x="1340" y="850" width="560" height="214" as="geometry" />
 </mxCell>
-<mxCell id="academic_profiles" value="&lt;b&gt;academic_profiles&lt;/b&gt;&lt;br/&gt;PK student_id: uuid&lt;br/&gt;current_gpa: numeric&lt;br/&gt;credits_earned: int4&lt;br/&gt;academic_year: int4&lt;br/&gt;semester: int4" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="60" y="1240" width="560" height="189" as="geometry"/>
+<mxCell id="academic_profiles" value="&lt;b&gt;academic_profiles&lt;/b&gt;&lt;br/&gt;PK student_id: uuid&lt;br/&gt;current_gpa: numeric&lt;br/&gt;credits_counted: int4&lt;br/&gt;academic_year: int4&lt;br/&gt;semester: int4" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
+<mxGeometry x="60" y="1240" width="560" height="189" as="geometry" />
 </mxCell>
 <mxCell id="conversation_state" value="&lt;b&gt;conversation_state&lt;/b&gt;&lt;br/&gt;PK student_id: uuid&lt;br/&gt;state: jsonb&lt;br/&gt;expires_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="700" y="1240" width="560" height="139" as="geometry"/>
+<mxGeometry x="700" y="1240" width="560" height="139" as="geometry" />
 </mxCell>
 <mxCell id="private_jobs" value="&lt;b&gt;private_jobs&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;student_id: uuid&lt;br/&gt;event_id: text&lt;br/&gt;kind: text&lt;br/&gt;payload: jsonb&lt;br/&gt;expires_at: timestamptz&lt;br/&gt;created_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="1340" y="1240" width="560" height="239" as="geometry"/>
+<mxGeometry x="1340" y="1240" width="560" height="239" as="geometry" />
 </mxCell>
 <mxCell id="grading_revisions" value="&lt;b&gt;grading_revisions&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;revision: int4&lt;br/&gt;actor_id: uuid ?&lt;br/&gt;previous_weights: jsonb&lt;br/&gt;new_weights: jsonb&lt;br/&gt;created_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#E4F1E8;strokeColor=#547569;">
-<mxGeometry x="700" y="1680" width="560" height="239" as="geometry"/>
+<mxGeometry x="700" y="1680" width="560" height="239" as="geometry" />
 </mxCell>
 <mxCell id="schema_migrations" value="&lt;b&gt;schema_migrations&lt;/b&gt;&lt;br/&gt;PK name: text&lt;br/&gt;checksum: text&lt;br/&gt;applied_at: timestamptz" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;">
-<mxGeometry x="1340" y="1680" width="560" height="139" as="geometry"/>
+<mxGeometry x="1340" y="1680" width="560" height="139" as="geometry" />
 </mxCell>
 <mxCell id="fk0" value="FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE" edge="1" parent="1" source="academic_profiles" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk1" value="FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE" edge="1" parent="1" source="attendance" target="enrollments" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk2" value="FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT" edge="1" parent="1" source="attendance" target="components" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk3" value="FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE" edge="1" parent="1" source="components" target="sections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk4" value="FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE" edge="1" parent="1" source="conversation_state" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk5" value="FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE" edge="1" parent="1" source="enrollments" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk6" value="FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE RESTRICT" edge="1" parent="1" source="enrollments" target="sections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk7" value="FOREIGN KEY (actor_id) REFERENCES students(id) ON DELETE SET NULL" edge="1" parent="1" source="grading_revisions" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk8" value="FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE" edge="1" parent="1" source="grading_revisions" target="sections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk9" value="FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE" edge="1" parent="1" source="private_jobs" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk10" value="FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT" edge="1" parent="1" source="scores" target="components" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk11" value="FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE" edge="1" parent="1" source="scores" target="enrollments" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="fk12" value="FOREIGN KEY (creator_id) REFERENCES students(id) ON DELETE SET NULL" edge="1" parent="1" source="sections" target="students" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;">
-<mxGeometry relative="1" as="geometry"/>
+<mxGeometry relative="1" as="geometry" />
 </mxCell>
-</root>
+<mxCell id="deadline_notifications" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=15;fontSize=17;fillColor=#EEF3F7;strokeColor=#547569;" value="&lt;b&gt;deadline_notifications&lt;/b&gt;&lt;br/&gt;PK id: uuid&lt;br/&gt;student_id: uuid&lt;br/&gt;section_id: uuid&lt;br/&gt;retry_key: uuid&lt;br/&gt;message: text&lt;br/&gt;attempts: int4&lt;br/&gt;status: text&lt;br/&gt;next_attempt_at: timestamptz&lt;br/&gt;created_at: timestamptz"><mxGeometry x="60" y="1680" width="560" height="289" as="geometry" /></mxCell><mxCell id="fk13" edge="1" parent="1" source="deadline_notifications" target="students" value="FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;"><mxGeometry relative="1" as="geometry" /></mxCell><mxCell id="fk14" edge="1" parent="1" source="deadline_notifications" target="sections" value="FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;endArrow=block;startArrow=none;strokeColor=#71877E;"><mxGeometry relative="1" as="geometry" /></mxCell></root>
 </mxGraphModel>
 </diagram>
 </mxfile>

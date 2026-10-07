@@ -17,11 +17,12 @@ const App = () => {
     const token = liff.getIDToken();
     if (!token) throw new Error('Your LINE session has expired. Reopen the app to sign in.');
     const response = await fetch('/api/v1' + route, {
-      ...options, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      ...options, headers: { Authorization: 'Bearer ' + token,
+        ...(options.body instanceof FormData ? {} : {'Content-Type':'application/json'}) },
     });
     if (response.status === 204) return null;
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error?.message || 'Request failed. Please retry.');
+    if (!response.ok) throw Object.assign(new Error(result.error?.message || 'Request failed. Please retry.'),{status:response.status,code:result.error?.code});
     return result.data;
   }, []);
   useEffect(() => {
@@ -57,6 +58,13 @@ const App = () => {
         setConsent(await callApi('/consents')); setNotice('Your data was deleted and storage consent withdrawn.');
       })}>Delete my data</button></div>
   </>;
+  const explanationConsent=<div className="card"><h3>Optional AI explanations</h3><p>Allow anonymised calculated values to be sent to Google Gemini, where processing may occur outside Thailand and protection standards may differ. Names, LINE identifiers and individual assessment scores are excluded. Declining keeps complete local Thai explanations available.</p>
+    <label className="check"><input type="checkbox" checked={consent?.crossBorderExplanation===true} disabled={busy} onChange={e=>{
+      const enabled=e.target.checked,previous=consent.crossBorderExplanation;
+      setConsent(old=>({...old,crossBorderExplanation:enabled}));
+      act(async()=>{try{setConsent(await callApi('/consents',{method:'PUT',body:JSON.stringify({storage:true,crossBorderExplanation:enabled,policyVersion:consent.policyVersion})}));}
+        catch(error){setConsent(old=>({...old,crossBorderExplanation:previous}));throw error;}});
+    }}/>I allow external processing of calculated values for explanations.</label></div>;
   return <main className="app-shell">
     <header className="brand"><svg className="brand-mark" viewBox="381 189 635 635" width="40" height="40" aria-hidden="true"><image href={rordmaiLogo} width="1359" height="1157" /></svg><div><h1>Rord-Mai</h1><small>Your academic companion</small></div><span className="liff-label">LINE app</span></header>
     {error && <p role="alert" className="error">{error}</p>}
@@ -79,7 +87,7 @@ const App = () => {
         })}>Agree and continue</button>
         <button className="secondary" disabled={busy} onClick={() => { setAccepted(false); setNotice('Declined. No student record was created by this choice.'); }}>Decline</button>
       </div>
-    </section> : <CourseWorkspace api={callApi} privacy={privacy} privacyBusy={busy} />)}
+    </section> : <CourseWorkspace api={callApi} privacy={<>{privacy}{explanationConsent}</>} privacyBusy={busy} />)}
     <footer>Progress demo · Fictional academic data</footer>
   </main>;
 };

@@ -183,7 +183,7 @@ Expected final consent SQL message: `Storage consent schema checks passed; test 
 
 ## Evidence and coverage limits
 
-During the preceding folder cleanup on 2026-09-21, the assistant ran all 46 Jest cases successfully. The developer supplied successful practice migration/schema output and all 11 Node database PASS messages earlier in this conversation. The database scripts were not rerun during cleanup or this documentation work. These are dated execution results, not a guarantee that every future checkout passes.
+Recorded verification on 2026-09-21: all 46 Jest cases passed. Separate practice migration/schema results and 11 successful Node database checks were also recorded. The database scripts were not rerun during the folder cleanup or documentation update. These are dated execution results, not a guarantee that every future checkout passes.
 
 24 September update: create/join now persist through the guarded academic service. The old placeholder assertions have been replaced. The PostgreSQL suite covers consent rejection for every implemented academic writer, transactions, private ownership, shared corrections and deletion. PRV-01 still needs the future chat writers and live release verification before its full presentation gate is complete. See docs/development/interfaces.md for current behaviour.
 

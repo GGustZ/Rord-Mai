@@ -1,8 +1,10 @@
-# September 23–24 integration interfaces
+# Rord-Mai integration interfaces
 
-Implementation owner for this session: AI-assisted work requested by Chavadol.
-Frontend and engine foundation were authorised even where the original tracker assigned another member.
-Teammates must reconcile these files before merging parallel work.
+Updated 7 October 2026: profile/GPAX, repeat metadata, separate explanation consent, templates/Gemini fallback, image-only OCR drafts and deadline pushes are implemented locally. See the [current API contract](../api/contract.md). The original teammate engine handoff was a written document, not runnable source; preserve that attribution. Real provider, container, scheduling and team-review gates remain separate.
+
+The sections below retain the September integration history. Where they describe profile processing or external consent as deferred, the current contract supersedes those historical statements. Migration 006 implements counted-credit naming, repeat metadata, independent explanation consent and deletion-linked notification records. Existing private-data and shared-structure rules remain.
+
+These interfaces describe the integrated frontend and engine. Original task ownership is recorded in the tracker; reconcile interfaces before merging parallel implementations.
 
 ## Frontend
 

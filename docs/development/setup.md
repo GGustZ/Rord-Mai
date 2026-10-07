@@ -28,7 +28,21 @@ For Docker: set POSTGRES_PASSWORD, LINE_LOGIN_CHANNEL_ID and LIFF_ID in .env, th
 docker compose up --build
 ```
 Use a URL-safe local development password in Compose. App and DB use a private container network; local published ports bind to loopback.
-The progress container omits OCR packages because OCR is outside this release.
+The container now includes local Tesseract with Thai/English data. OCR accepts PNG/JPG only; PDF is deferred. On Windows without Docker, install native Tesseract separately and set TESSERACT_COMMAND to its executable path. Missing language data or executable returns a clear unavailable response; manual entry remains usable.
+
+Optional Gemini configuration uses GEMINI_API_KEY and GEMINI_MODEL together. Leave both empty for complete local Thai templates. Keep server credentials out of Vite variables. An explicitly configured model must support Generate Content JSON responses; errors and a five-second timeout fall back locally. External processing also requires the student's separate consent.
+
+## Deadline notifications
+
+The hourly workflow runs at minute 17 UTC. Create a GitHub environment named `notifications`, restrict access to the release/default branch, and supply DATABASE_URL, LINE_CHANNEL_ACCESS_TOKEN, LIFF_ID and STORAGE_POLICY_VERSION as protected secrets. Use the deployed database after migration 006. The runner never applies migrations. Enable scheduled operation only after a real test-account push and configuration review. GitHub schedules can be delayed or skipped; this is not an exact-time delivery guarantee.
+
+For one controlled run:
+
+```powershell
+node --env-file=.env scripts/run-deadline-alerts.cjs
+```
+
+This command sends real pushes to eligible consented accounts when real credentials are configured. It retries transient failures using the persisted LINE key, prints only counts/times, and returns a failure exit code on permanent/exhausted delivery errors. Keep test runs limited to the agreed accounts and fictional data.
 
 ## Verification
 

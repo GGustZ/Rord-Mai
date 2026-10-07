@@ -10,6 +10,7 @@ export default async () => {
   const { createConsentService } = require('../../api/src/services/consent-service');
   const { createApp } = require('../../api/src/app');
   const { createChatService } = require('../../api/src/services/chat-service');
+  const { createOcrService } = require('../../api/src/services/ocr-service');
   const { createHash } = require('node:crypto');
   const pool = new Pool({ connectionString:url });
   let apiServer, server, chat;
@@ -19,6 +20,8 @@ export default async () => {
     const consentService = createConsentService({pool,currentPolicyVersion:'v1'});
     chat = createChatService({ pool, consentService, liffId:'123-test', messaging:{reply:async()=>{}} });
     const app = createApp({ pool, consentService,
+      // Only native OCR is controlled; upload validation, API, consent and PostgreSQL remain real.
+      ocrService:createOcrService({recognizeImage:async()=> 'Midterm 40%\nFinal 60%'}),
       lineWebhook:{secret:'browser-test-secret',chatService:chat},
       publicConfig:{liffId:'123-test',policyVersion:'v1'},
       verifyIdentity:async token=>{

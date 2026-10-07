@@ -8,6 +8,8 @@ const { createLineVerifier } = require('./adapters/line-identity');
 const { createConsentService } = require('./services/consent-service');
 const { createLineMessaging } = require('./adapters/line-messaging');
 const { createChatService } = require('./services/chat-service');
+const { createGemini } = require('./adapters/gemini');
+const { createOcrService } = require('./services/ocr-service');
 const start = async () => {
   let config;
   try { config = readConfig(); }
@@ -25,6 +27,8 @@ const start = async () => {
       consentService,
       lineWebhook: chatService ? { secret: config.messaging.channelSecret, chatService } : null,
       publicConfig: { liffId: config.liffId, policyVersion: config.policyVersion },
+      generateText:config.gemini?createGemini(config.gemini):null,
+      ocrService:createOcrService({executable:config.tesseract}),
       webRoot: path.resolve(__dirname, '../../web/dist'),
     });
     const server = app.listen(config.port, () => console.log('Rord-Mai listening on port ' + config.port));

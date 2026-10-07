@@ -52,7 +52,7 @@ test('grant uses one transaction and keeps identity in query parameters', async 
     const result = await f.service.grantStorageConsent({ identity, accepted: true, policyVersion: 'v1' });
     assert.equal(result.id, 'existing-id');
     assert.equal(f.connections(), 1);
-    assert.deepEqual(f.calls[1].values, [identity.lineUserId, 'v1']);
+    assert.deepEqual(f.calls[1].values, [identity.lineUserId, 'v1', false]);
     assert.equal(f.calls[0].sql, 'BEGIN');
     assert.equal(f.calls.at(-1).sql, 'COMMIT');
     assert.deepEqual(f.released(), { error: undefined });

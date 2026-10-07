@@ -7,8 +7,14 @@ const { fail } = require('./lib/errors');
 const { createAcademicService } = require('./services/academic-service');
 const { createAcademicRouter } = require('./http/routes/academic-routes');
 const { createLineWebhook } = require('./http/routes/line-webhook');
+const { createGpaxService } = require('./services/gpax-service');
+const { createGpaxRouter } = require('./http/routes/gpax-routes');
+const { createExplanationService } = require('./services/explanation-service');
+const { createExplanationRouter } = require('./http/routes/explanation-routes');
+const { createOcrService } = require('./services/ocr-service');
+const { createOcrRouter } = require('./http/routes/ocr-routes');
 
-const createApp = ({ verifyIdentity, consentService, academicService, pool, publicConfig, webRoot, lineWebhook } = {}) => {
+const createApp = ({ verifyIdentity, consentService, academicService, pool, publicConfig, webRoot, lineWebhook, generateText, ocrService } = {}) => {
     const app = express();
 
     app.disable('x-powered-by');
@@ -41,6 +47,8 @@ const createApp = ({ verifyIdentity, consentService, academicService, pool, publ
     // Missing configuration always fails closed, including when constructed outside server.js.
     app.use('/api/v1', authenticate(verifyIdentity || (async () => { throw fail('IDENTITY_UNAVAILABLE'); })));
     if (consentService) {
+        // Multipart OCR is authenticated and consent checked before accepting the image.
+        app.use('/api/v1', createOcrRouter({consentService,ocrService:ocrService||createOcrService()}));
         app.use('/api/v1', (req, _res, next) => {
             if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !req.is('application/json')) {
                 return next(fail('UNSUPPORTED_MEDIA_TYPE'));
@@ -49,6 +57,9 @@ const createApp = ({ verifyIdentity, consentService, academicService, pool, publ
         });
         app.use('/api/v1', createPrivacyRouter(consentService));
         app.use('/api/v1', createAcademicRouter(academicService || createAcademicService({ consentService })));
+        const gpaxService=createGpaxService({consentService});
+        app.use('/api/v1',createGpaxRouter(gpaxService));
+        app.use('/api/v1',createExplanationRouter(createExplanationService({consentService,gpaxService,generateText})));
     }
     if (webRoot) {
         app.use(express.static(webRoot));

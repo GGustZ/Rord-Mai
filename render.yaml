@@ -20,6 +20,10 @@ services:
         sync: false
       - key: STORAGE_POLICY_VERSION
         value: 2026-09-demo-v1
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
 databases:
   - name: rord-mai-progress-db
     plan: free
