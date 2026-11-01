@@ -6,9 +6,9 @@ const section = () => ({courseCode:'TEST',courseName:'Test',sectionNumber:'1',ac
   gradingMode:'norm',gradeThresholds:null,withdrawalDeadline:'2026-10-31',components:[
     {name:'Work',weightPercent:40,maximumScore:100,inputType:'marks'},
     {name:'Exam',weightPercent:60,maximumScore:100,inputType:'marks'}]});
-test.each([[35,95,'ขาด 5%'],[45,105,'เกิน 5%'],[39.99,99.99,'ขาด 0.01%']])('create and revision explain total %s',async(weight,total,gap)=>{
+test.each([[35,95,'missing 5%'],[45,105,'excess 5%'],[39.99,99.99,'missing 0.01%']])('create and revision explain total %s',async(weight,total,gap)=>{
   const input=section();input.components[0].weightPercent=weight;
-  const expected=`ผลรวมน้ำหนัก ${total}%; ${gap}. น้ำหนักต้องรวมเป็น 100%.`;
+  const expected=`Total weight ${total}%; ${gap}. Weights must total 100%.`;
   expect(validateCreateSection(input).errors).toContainEqual({path:'components',message:expected});
   const consentService={withStorageConsent:jest.fn()};
   const academicService=createAcademicService({consentService});

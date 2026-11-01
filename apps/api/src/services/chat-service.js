@@ -37,7 +37,7 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
     } catch (error) {
       if (error.code !== 'STORAGE_CONSENT_REQUIRED') throw error;
       // No identity, text, token or job is persisted before consent.
-      return () => reply(event.replyToken, 'เปิด Rord-Mai และยินยอมให้จัดเก็บข้อมูลก่อนบันทึกคะแนน: ' + appUrl);
+      return () => reply(event.replyToken, 'Open RordMai and allow academic storage before recording scores: ' + appUrl);
     }
   };
 

@@ -1,102 +1,45 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import React,{useCallback,useEffect,useState} from 'react';
+import {createRoot} from 'react-dom/client';
 import liff from './line-client.js';
 import './style.css';
-import rordmaiLogo from './assets/rordmai-logo.png';
-import { CourseWorkspace } from './CourseWorkspace.jsx';
-
-const App = () => {
-  const [consent, setConsent] = useState(null);
-  const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [accepted, setAccepted] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const [explanationStep, setExplanationStep] = useState(false);
-  const callApi = useCallback(async (route, options = {}) => {
-    const token = liff.getIDToken();
-    if (!token) throw new Error('เซสชัน LINE หมดอายุ กรุณาเปิดแอปใหม่เพื่อเข้าสู่ระบบ');
-    const response = await fetch('/api/v1' + route, {
-      ...options, headers: { Authorization: 'Bearer ' + token,
-        ...(options.body instanceof FormData ? {} : {'Content-Type':'application/json'}) },
-    });
-    if (response.status === 204) return null;
-    const result = await response.json();
-    if (!response.ok) throw Object.assign(new Error(result.error?.details?.[0]?.message || result.error?.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่'),{status:response.status,code:result.error?.code});
-    return result.data;
-  }, []);
-  useEffect(() => {
-    let active = true;
-    const initialise = async () => {
-      const response = await fetch('/api/config');
-      const result = await response.json();
-      if (!result.data?.liffId) throw new Error('ยังไม่ได้ตั้งค่าการเชื่อมต่อ LINE');
-      await liff.init({ liffId: result.data.liffId });
-      if (!liff.isLoggedIn()) { liff.login(); return; }
-      const value = await callApi('/consents');
-      if (active) { setConsent(value); setReady(true); }
-    };
-    initialise().catch((e) => { if (active) setError(e.message); });
-    return () => { active = false; };
-  }, [callApi]);
-  const act = async (work) => {
-    setBusy(true); setError(''); setNotice('');
-    try { await work(); } catch (e) { setError(e.message); } finally { setBusy(false); }
-  };
-  const privacy = <>
-    <div className="card"><p className="success">คุณยินยอมให้จัดเก็บข้อมูลแล้ว</p>
-      <p>ระบบจัดเก็บรหัส LINE รายวิชาที่เข้าร่วม และข้อมูลการเรียนบนบริการโฮสต์ฟรีนอกประเทศไทย ซึ่งอาจพักการทำงานเมื่อไม่มีผู้ใช้</p>
-      <small>นโยบายการจัดเก็บข้อมูล: {consent?.policyVersion}</small></div>
-    <div className="card"><h3>ถอนความยินยอมและลบข้อมูลของฉัน</h3>
-      <p>การลบจะนำข้อมูลการเรียนและสถานะสนทนาส่วนตัวออก โครงสร้างรายวิชาที่เพื่อนยังใช้จะคงอยู่โดยลบชื่อผู้สร้าง การดำเนินการนี้ย้อนกลับไม่ได้</p>
-      <label className="check"><input type="checkbox" checked={confirmed} disabled={busy} onChange={(e) => setConfirmed(e.target.checked)} />ฉันยืนยันการลบข้อมูลที่บันทึกไว้</label>
-      <button className="danger" disabled={!confirmed || busy} onClick={() => act(async () => {
-        await callApi('/me/data', { method: 'DELETE', body: JSON.stringify({ confirmDeletion: true }) });
-        // Clear private views immediately, even if fetching the new policy fails.
-        setConsent(old => ({ ...old, storage: false }));
-        setConfirmed(false); setAccepted(false); setExplanationStep(false);
-        setConsent(await callApi('/consents')); setNotice('ลบข้อมูลและถอนความยินยอมให้จัดเก็บข้อมูลแล้ว');
-      })}>ลบข้อมูลของฉัน</button></div>
+import {CourseWorkspace} from './CourseWorkspace.jsx';
+import {AppHeader,Icon,ProfileForm,StepProgress} from './Interface.jsx';
+const App=()=>{
+  const [consent,setConsent]=useState(null),[profile,setProfile]=useState(null),[stage,setStage]=useState('loading'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const [accepted,setAccepted]=useState(false),[confirmed,setConfirmed]=useState(false),[ai,setAi]=useState(false),[initialView,setInitialView]=useState('courses');
+  const callApi=useCallback(async(route,options={})=>{
+    const token=liff.getIDToken();if(!token)throw Error('Your LINE session expired. Reopen the app to sign in.');
+    const response=await fetch('/api/v1'+route,{...options,headers:{Authorization:'Bearer '+token,...(options.body instanceof FormData?{}:{'Content-Type':'application/json'})}});
+    if(response.status===204)return null;const result=await response.json();
+    if(!response.ok)throw Object.assign(Error(result.error?.details?.[0]?.message||result.error?.message||'The request failed. Please try again.'),{status:response.status,code:result.error?.code});return result.data;
+  },[]);
+  const act=async work=>{setBusy(true);setError('');setNotice('');try{await work();}catch(e){setError(e.message);}finally{setBusy(false);}};
+  useEffect(()=>{let active=true;(async()=>{
+    const config=await(await fetch('/api/config')).json();if(!config.data?.liffId)throw Error('LINE integration has not been configured.');await liff.init({liffId:config.data.liffId});if(!liff.isLoggedIn()){liff.login();return;}
+    const choice=await callApi('/consents');let saved=null;if(choice.storage)try{saved=await callApi('/me/profile');}catch(e){if(e.status!==404)throw e;}
+    if(active){setConsent(choice);setAi(choice.crossBorderExplanation===true);setProfile(saved);setStage(!choice.storage?'storage':saved?'workspace':'ai');}
+  })().catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[callApi]);
+  const go=next=>{setStage(next);setError('');setNotice('');window.scrollTo(0,0);};
+  const privacy=<>
+    <div className="card"><h3>Academic storage permission</h3><p className="success">You have allowed academic data storage</p><p>Your LINE identifier, enrolled courses and academic data are stored on a free hosting service outside Thailand. The service may sleep when inactive.</p><small>Storage policy: {consent?.policyVersion}</small></div>
+    <div className="card"><h3>Optional AI explanations</h3><p>Only anonymous calculated values are sent to Google Gemini, which may process them outside Thailand. Names, LINE identifiers, course identifiers and individual assessment scores are never sent. Thai template explanations remain available without external AI.</p><label className="check"><input type="checkbox" checked={consent?.crossBorderExplanation===true} disabled={busy} onChange={e=>{const enabled=e.target.checked,previous=consent.crossBorderExplanation;setConsent(old=>({...old,crossBorderExplanation:enabled}));act(async()=>{try{setConsent(await callApi('/consents/cross-border-explanation',{method:'PUT',body:JSON.stringify({crossBorderExplanation:enabled,policyVersion:consent.policyVersion})}));}catch(error){setConsent(old=>({...old,crossBorderExplanation:previous}));throw error;}});}}/>Allow external processing of calculated values for explanations</label></div>
+    <div className="card"><h3>Update Academic Profile</h3><ProfileForm value={profile} busy={busy} onSave={value=>act(async()=>{setProfile(await callApi('/me/profile',{method:'PUT',body:JSON.stringify(value)}));setNotice('Academic profile saved');})}/></div>
+    <div className="card"><h3>Withdraw permission & delete my data</h3><p>This removes academic records and private chat state. Shared sections used by classmates remain with the creator identity removed. Deletion cannot be undone.</p><label className="check"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e=>setConfirmed(e.target.checked)}/>I confirm deletion of my saved data</label><button className="danger" disabled={!confirmed||busy} onClick={()=>act(async()=>{
+      await callApi('/me/data',{method:'DELETE',body:JSON.stringify({confirmDeletion:true})});
+      // Clear private views before the next request can fail.
+      setConsent(old=>({...old,storage:false}));setProfile(null);setConfirmed(false);setAccepted(false);setAi(false);setInitialView('courses');go('storage');setConsent(await callApi('/consents'));setNotice('Your data was deleted and storage permission withdrawn.');
+    })}>Delete my data</button></div>
   </>;
-  const explanationConsent=<div className="card"><h3>คำอธิบายด้วย AI (ไม่บังคับ)</h3><p>หากยินยอม ระบบจะส่งเฉพาะค่าที่คำนวณแล้วโดยไม่ระบุชื่อให้ Google Gemini ซึ่งอาจประมวลผลนอกประเทศไทยและมีมาตรฐานคุ้มครองต่างกัน โดยไม่ส่งชื่อ รหัส LINE รหัสวิชา หรือคะแนนรายชิ้นงาน หากไม่ยินยอมยังใช้คำอธิบายภาษาไทยจากแม่แบบภายในได้ครบ</p>
-    <label className="check"><input type="checkbox" checked={consent?.crossBorderExplanation===true} disabled={busy} onChange={e=>{
-      const enabled=e.target.checked,previous=consent.crossBorderExplanation;
-      setConsent(old=>({...old,crossBorderExplanation:enabled}));
-      act(async()=>{try{setConsent(await callApi('/consents/cross-border-explanation',{method:'PUT',body:JSON.stringify({crossBorderExplanation:enabled,policyVersion:consent.policyVersion})}));}
-        catch(error){setConsent(old=>({...old,crossBorderExplanation:previous}));throw error;}});
-    }}/>ฉันยินยอมให้ส่งค่าที่คำนวณแล้วไปประมวลผลภายนอกเพื่อสร้างคำอธิบาย</label></div>;
-  return <main className="app-shell">
-    <header className="brand"><svg className="brand-mark" viewBox="381 189 635 635" width="40" height="40" aria-hidden="true"><image href={rordmaiLogo} width="1359" height="1157" /></svg><div><h1>Rord-Mai</h1><small>ผู้ช่วยติดตามผลการเรียน</small></div><span className="liff-label">แอปใน LINE</span></header>
-    {error && <p role="alert" className="error">{error}</p>}
-    {notice && <p role="status">{notice}</p>}
-    {!ready && !error && <p role="status">กำลังเชื่อมต่อ LINE อย่างปลอดภัย…</p>}
-    {ready && (!consent.storage ? <section className="screen" aria-labelledby="privacy"><p className="eyebrow">ยินดีต้อนรับสู่รอดมั้ย</p><h2 id="privacy">ข้อมูลของคุณ คุณเป็นผู้เลือก</h2>
-      <p>เข้าใจคะแนนของคุณ<br />วางแผนการเรียนขั้นต่อไป</p>
-      <div className="card"><h3>ความยินยอมให้จัดเก็บข้อมูลการเรียน</h3>
-      <p>ระบบจะจัดเก็บรหัส LINE รายวิชาที่เข้าร่วม และข้อมูลการเรียนเมื่อคุณยินยอมเท่านั้น
-        การเข้าสู่ระบบเพียงอย่างเดียวจะไม่สร้างระเบียนนักศึกษา</p>
-      <p>สำหรับการสาธิตนี้ กรุณาใช้บัญชีทดสอบและข้อมูลการเรียนสมมติ ข้อมูลอยู่บนบริการโฮสต์ฟรีนอกประเทศไทย ซึ่งอาจพักการทำงานเมื่อไม่มีผู้ใช้</p>
-      <small>นโยบายการจัดเก็บข้อมูล: {consent.policyVersion}</small>
-        <label className="check"><input type="checkbox" checked={accepted} disabled={busy} onChange={(e) => setAccepted(e.target.checked)} />
-          ฉันยินยอมให้จัดเก็บข้อมูลการเรียนสมมติสำหรับการสาธิตบนโฮสต์นอกประเทศไทย</label>
-        <button disabled={!accepted || busy} onClick={() => act(async () => {
-          const value = await callApi('/consents/storage', { method: 'PUT', body: JSON.stringify({
-            storage: true, policyVersion: consent.policyVersion,
-          }) });
-          setConsent(value); setExplanationStep(true); setNotice('');
-        })}>ยินยอมและดำเนินการต่อ</button>
-        <button className="secondary" disabled={busy} onClick={() => { setAccepted(false); setNotice('ไม่ยินยอม ระบบไม่ได้สร้างระเบียนนักศึกษาจากการเลือกนี้'); }}>ไม่ยินยอม</button>
-      </div>
-    </section> : explanationStep ? <section className="screen" aria-labelledby="explanation-choice"><h2 id="explanation-choice">คำอธิบายด้วย AI (ไม่บังคับ)</h2>
-      <p>ระบบสามารถส่งค่าที่คำนวณแล้วโดยไม่ระบุชื่อไปยัง Google Gemini ซึ่งอาจประมวลผลนอกประเทศไทย โดยไม่ส่งชื่อ รหัส LINE รหัสวิชา หรือคะแนนรายชิ้นงาน</p>
-      <p>หากไม่ยินยอม คุณยังใช้ทุกฟังก์ชันหลักและคำอธิบายภาษาไทยจากแม่แบบภายในได้ และเปลี่ยนใจได้ที่หน้าความเป็นส่วนตัว</p>
-      {[true,false].map(enabled=><button key={String(enabled)} className={enabled?'':'secondary'} disabled={busy} onClick={()=>act(async()=>{
-        setConsent(await callApi('/consents/cross-border-explanation',{method:'PUT',body:JSON.stringify({crossBorderExplanation:enabled,policyVersion:consent.policyVersion})}));
-        setExplanationStep(false);
-      })}>{enabled?'ยินยอมใช้ AI อธิบาย':'ใช้ต่อโดยไม่ใช้ AI'}</button>)}
-    </section> : <CourseWorkspace api={callApi} privacy={<>{privacy}{explanationConsent}</>} privacyBusy={busy} />)}
-    <footer>การสาธิต · ใช้ข้อมูลการเรียนสมมติ</footer>
-  </main>;
+  const step={storage:1,ai:2,profile:3,complete:4}[stage];
+  return <main className="app-shell">{stage==='workspace'?<CourseWorkspace api={callApi} privacy={privacy} privacyBusy={busy} initialView={initialView} profile={profile}/>:<>
+    <AppHeader disabled={busy} onBack={step>1?()=>go(stage==='ai'?'storage':stage==='profile'?'ai':'profile'):undefined}/><section className={'screen onboarding '+(stage==='complete'?'completion':'')}>
+      {step&&stage!=='complete'&&<StepProgress step={step} total={4} label={{storage:'Data Permission',ai:'AI Explanations',profile:'Academic Profile'}[stage]}/>}{stage==='loading'&&!error&&<p role="status">Connecting securely to LINE…</p>}
+      {stage==='storage'&&<><span className="feature-icon"><Icon name="book"/></span><h2>Permission to Store Academic Information</h2><p>RordMai needs your permission before saving your academic information.</p><div className="card tinted"><h3 className="eyebrow">What this permission allows</h3><ul className="check-list">{['Save and view course assessment scores','Track course progress and syllabus weights','Set target grades and calculate remaining needed marks','Compare GPA and withdrawal scenarios','Save attendance records'].map(text=><li key={text}><Icon/>{text}</li>)}</ul></div>
+        <label className="check permission-card"><input type="checkbox" checked={accepted} disabled={busy} onChange={e=>setAccepted(e.target.checked)}/><span><strong>Allow RordMai to store my academic information</strong><small>Required for saved academic features. Signing in alone creates no student record.</small></span></label><p className="message warning">If you decline, no academic information will be saved and features needing saved data remain unavailable.</p><p className="message info">For this demonstration, use fictional academic data. Data is hosted outside Thailand on a free service that may sleep when inactive. Storage policy: {consent?.policyVersion}</p>
+        <button disabled={!accepted||busy} onClick={()=>act(async()=>{setConsent(await callApi('/consents/storage',{method:'PUT',body:JSON.stringify({storage:true,policyVersion:consent.policyVersion})}));go('ai');})}>Agree & Continue <Icon name="arrow"/></button><button className="secondary" disabled={busy} onClick={()=>{setAccepted(false);setNotice('You declined. No student record was created by this choice.');}}>Decline</button></>}
+      {stage==='ai'&&<><div className="section-row"><span className="feature-icon purple"><Icon name="bolt"/></span><span className="badge neutral">Optional</span></div><h2>AI Explanations</h2><p>RordMai can use an external AI service to help write Thai explanations of calculated results.</p><div className="card tinted"><h3 className="eyebrow">Clear operating rules</h3><ul className="check-list"><li><Icon/><span><strong>RordMai calculates all results first.</strong> All math, weighted points and GPA models run inside RordMai.</span></li><li><Icon/><span><strong>AI only helps explain the results.</strong> It does not calculate grades or decide whether you should withdraw.</span></li></ul></div><p className="message info"><strong>Privacy Information</strong><br/>Anonymous calculated values may be processed by Google Gemini outside Thailand. Names, LINE identifiers, course identifiers and individual assessment scores are never sent.</p><label className="check permission-card"><input type="checkbox" checked={ai} disabled={busy} onChange={e=>setAi(e.target.checked)}/><span><strong>Allow AI-generated explanations</strong><small>Optional. Change this anytime in Help & Settings.</small></span></label><p className="muted">You receive the same calculations and complete Thai template explanations if you decline.</p><button disabled={busy} onClick={()=>act(async()=>{setConsent(await callApi('/consents/cross-border-explanation',{method:'PUT',body:JSON.stringify({crossBorderExplanation:ai,policyVersion:consent.policyVersion})}));go('profile');})}>Continue <Icon name="arrow"/></button></>}
+      {stage==='profile'&&<><h2>Set Up Your Profile</h2><p>Configure your active academic term and optional GPA baseline.</p><ProfileForm value={profile} busy={busy} onSave={value=>act(async()=>{setProfile(await callApi('/me/profile',{method:'PUT',body:JSON.stringify(value)}));go('complete');})}/></>}
+      {stage==='complete'&&<><span className="success-mark"><Icon/></span><h2>You’re all set!</h2><p>Start by adding or joining a course section to track assessments and calculate your grades.</p><div className="card tinted setup-summary"><h3 className="eyebrow">Setup Overview</h3><dl><dt>Academic Term</dt><dd>Semester {profile.semester} / {profile.academicYear}</dd><dt>Baseline GPAX</dt><dd>{profile.currentGpa===null?'Not provided':profile.currentGpa+' ('+profile.creditsCounted+' GPA credits)'}</dd><dt>AI Explanations</dt><dd>{consent.crossBorderExplanation?'Enabled':'Disabled'}</dd></dl></div><button onClick={()=>{setInitialView('add');go('workspace');}}><Icon name="plus"/> Add a Course</button><button className="secondary" onClick={()=>{setInitialView('courses');go('workspace');}}>Go to My Courses</button></>}
+    </section></>}{error&&<p role="alert" className="error message">{error}</p>}{notice&&<p role="status" className="message">{notice}</p>}<footer>Local demonstration · Use fictional academic data</footer></main>;
 };
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<App/>);

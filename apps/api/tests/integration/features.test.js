@@ -105,7 +105,7 @@ test('transient pushes use the persisted key/body for three attempts with 1 and 
   await run();expect(messaging.push).toHaveBeenCalledTimes(1);
   time=new Date(first.nextRetryAt);const second=await run();expect(second.nextRetryAt).toBe('2026-10-07T10:06:00.000Z');
   time=new Date(second.nextRetryAt);await run();await run();expect(messaging.push).toHaveBeenCalledTimes(3);
-  expect(new Set(messaging.push.mock.calls.map(args=>args[2])).size).toBe(1);expect(new Set(messaging.push.mock.calls.map(args=>args[1])).size).toBe(1);
+  expect(new Set(messaging.push.mock.calls.map(args=>args[2])).size).toBe(1);expect(new Set(messaging.push.mock.calls.map(args=>JSON.stringify(args[1]))).size).toBe(1);
   expect((await pool.query('SELECT status,attempts FROM deadline_notifications')).rows).toEqual([{status:'failed',attempts:3}]);
 });
 test('deadline cutoff, changed targets, withdrawn consent and stale work stop delivery',async()=>{

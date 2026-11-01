@@ -7,7 +7,7 @@ const errorHandler = (error, _req, res, next) => {
         return res.status(400).json({
             error: {
                 code: 'INVALID_JSON',
-                message: 'ข้อมูลที่ส่งต้องเป็น JSON ที่ถูกต้อง',
+                message: 'The request body must be valid JSON.',
             },
         });
     }
@@ -16,16 +16,16 @@ const errorHandler = (error, _req, res, next) => {
         return res.status(413).json({
             error: {
                 code: 'PAYLOAD_TOO_LARGE',
-                message: 'ข้อมูลที่ส่งมีขนาดเกินกำหนด',
+                message: 'The request body is too large.',
             },
         });
     }
 
     const consentErrors = {
-        UNAUTHENTICATED: { status: 401, message: 'กรุณาเข้าสู่ระบบด้วย LINE ที่ตรวจสอบแล้ว' },
-        EXPLICIT_CONSENT_REQUIRED: { status: 400, message: 'กรุณายินยอมให้จัดเก็บข้อมูลอย่างชัดเจน' },
-        POLICY_VERSION_OUTDATED: { status: 409, message: 'กรุณายอมรับนโยบายการจัดเก็บข้อมูลฉบับปัจจุบัน' },
-        STORAGE_CONSENT_REQUIRED: { status: 403, message: 'กรุณายินยอมให้จัดเก็บข้อมูลก่อนใช้งาน' },
+        UNAUTHENTICATED: { status: 401, message: 'Sign in with a verified LINE identity.' },
+        EXPLICIT_CONSENT_REQUIRED: { status: 400, message: 'Explicit storage permission is required.' },
+        POLICY_VERSION_OUTDATED: { status: 409, message: 'Accept the current storage policy.' },
+        STORAGE_CONSENT_REQUIRED: { status: 403, message: 'Allow academic storage before using this feature.' },
     };
     const { messages } = require('../../lib/errors');
     for (const [code, [status, message]] of Object.entries(messages)) consentErrors[code] = { status, message };
@@ -43,7 +43,7 @@ const errorHandler = (error, _req, res, next) => {
     return res.status(500).json({
         error: {
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่'
+            message: 'An unexpected error occurred. Please try again.'
         },
     });
 

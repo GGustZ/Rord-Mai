@@ -54,8 +54,12 @@ Status: Ready for team review.
 
 The five-table migration above describes the original foundation, not the current complete schema. The earlier immutability note is superseded: creators may now revise the full set of weights using an expected revision, without changing components or rescaling marks.
 
-## Current physical schema, 27 September 2026
+## Current physical schema, 1 November 2026
 
-The editable ERD and PNG in `diagrams/` were reconciled against a PostgreSQL database with migrations 001 through 004 applied: 10 application tables plus schema_migrations, with 13 foreign keys. Migration 002 adds consent evidence; 003 adds attendance, profiles, grading revisions, conversation state, private jobs and nullable creator attribution; 004 adds component order and pagination support. A profile table does not imply that the deferred profile/GPAX features are implemented.
+The retained [editable ERD](diagrams/ERD.drawio) and the new report ERD panels were checked against a local PostgreSQL schema with migrations 001-006 applied: **11 application tables plus `schema_migrations`, 89 columns and 15 foreign keys**. The read-only check compared column names, PostgreSQL types, nullability, primary keys, foreign-key definitions and deletion actions; it did not read academic records.
+
+Migration 002 adds storage-consent evidence; 003 adds attendance, profiles, grading revisions, conversation state, private jobs and nullable creator attribution; 004 adds component order. Migration 005 adds the nullable legacy-compatible component input type. Migration 006 renames profile credits to `credits_counted`, adds independent external-explanation consent and optional previous-grade metadata, and introduces persisted deadline notifications. Stored previous-grade metadata does not implement a repeated-course replacement rule.
+
+Use [Figure 2: core ERD](../diagrams/exports/02-core-erd.svg) and [Figure 3: supporting ERD](../diagrams/exports/03-supporting-erd.svg) from the [report diagram pack](../diagrams/rord-mai-diagrams.html). They split the physical model for readability; repeated students/sections anchors in the supporting panel refer to existing core entities. `schema_migrations` is a technical table with no student relationship. The earlier diagram image is retained as an existing artifact; the new dated report exports are the report reference.
 
 Chat reuses conversation_state and private_jobs without a new migration. All private records cascade on student deletion; sections and revisions preserve shared grading structure with creator/actor attribution cleared. Upper mark bounds, complete weight totals, ownership and writer/withdrawal transactions are enforced by the application and covered by integration tests. See `privacy-lifecycle.md` and `../development/interfaces.md`.

@@ -1,0 +1,328 @@
+{
+  "baseline": "639686b",
+  "theme": {
+    "background": "#ffffff",
+    "ink": "#000000",
+    "fontFamily": "Arial, Helvetica, sans-serif"
+  },
+  "prepared": "2026-11-01",
+  "tables": {
+    "students": [
+      "PK id: uuid",
+      "line_user_id: text",
+      "created_at: timestamptz",
+      "updated_at: timestamptz",
+      "storage_consent: bool",
+      "storage_policy_version: text ?",
+      "storage_consented_at: timestamptz ?",
+      "cross_border_explanation: bool",
+      "explanation_consented_at: timestamptz ?"
+    ],
+    "sections": [
+      "PK id: uuid",
+      "join_code: varchar",
+      "course_code: varchar",
+      "course_name: varchar",
+      "section_number: varchar",
+      "academic_year: int4",
+      "semester: int4",
+      "credits: int4",
+      "grading_mode: text",
+      "withdrawal_deadline: date",
+      "a_min: numeric ?",
+      "b_plus_min: numeric ?",
+      "b_min: numeric ?",
+      "c_plus_min: numeric ?",
+      "c_min: numeric ?",
+      "d_plus_min: numeric ?",
+      "d_min: numeric ?",
+      "created_at: timestamptz",
+      "updated_at: timestamptz",
+      "creator_id: uuid ?",
+      "structure_revision: int4"
+    ],
+    "components": [
+      "PK id: uuid",
+      "section_id: uuid",
+      "name: varchar",
+      "weight_percent: numeric",
+      "maximum_score: numeric",
+      "position: int4",
+      "input_type: text ?"
+    ],
+    "enrollments": [
+      "PK id: uuid",
+      "student_id: uuid",
+      "section_id: uuid",
+      "target_grade: text ?",
+      "created_at: timestamptz",
+      "previous_grade_point: numeric ?"
+    ],
+    "scores": [
+      "PK id: uuid",
+      "enrollment_id: uuid",
+      "component_id: uuid",
+      "section_id: uuid",
+      "score: numeric",
+      "updated_at: timestamptz"
+    ],
+    "attendance": [
+      "PK enrollment_id: uuid",
+      "PK component_id: uuid",
+      "section_id: uuid",
+      "attended: int4",
+      "total_sessions: int4",
+      "updated_at: timestamptz"
+    ],
+    "academic_profiles": [
+      "PK student_id: uuid",
+      "current_gpa: numeric",
+      "credits_counted: int4",
+      "academic_year: int4",
+      "semester: int4"
+    ],
+    "conversation_state": [
+      "PK student_id: uuid",
+      "state: jsonb",
+      "expires_at: timestamptz"
+    ],
+    "private_jobs": [
+      "PK id: uuid",
+      "student_id: uuid",
+      "event_id: text",
+      "kind: text",
+      "payload: jsonb",
+      "expires_at: timestamptz",
+      "created_at: timestamptz"
+    ],
+    "grading_revisions": [
+      "PK id: uuid",
+      "section_id: uuid",
+      "revision: int4",
+      "actor_id: uuid ?",
+      "previous_weights: jsonb",
+      "new_weights: jsonb",
+      "created_at: timestamptz"
+    ],
+    "schema_migrations": [
+      "PK name: text",
+      "checksum: text",
+      "applied_at: timestamptz"
+    ],
+    "deadline_notifications": [
+      "PK id: uuid",
+      "student_id: uuid",
+      "section_id: uuid",
+      "retry_key: uuid",
+      "message: text",
+      "attempts: int4",
+      "status: text",
+      "next_attempt_at: timestamptz",
+      "created_at: timestamptz"
+    ]
+  },
+  "foreignKeys": [
+    {
+      "id": "fk0",
+      "from": "academic_profiles",
+      "to": "students",
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk1",
+      "from": "attendance",
+      "to": "enrollments",
+      "definition": "FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk2",
+      "from": "attendance",
+      "to": "components",
+      "definition": "FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT"
+    },
+    {
+      "id": "fk3",
+      "from": "components",
+      "to": "sections",
+      "definition": "FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk4",
+      "from": "conversation_state",
+      "to": "students",
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk5",
+      "from": "enrollments",
+      "to": "students",
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk6",
+      "from": "enrollments",
+      "to": "sections",
+      "definition": "FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE RESTRICT"
+    },
+    {
+      "id": "fk7",
+      "from": "grading_revisions",
+      "to": "students",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES students(id) ON DELETE SET NULL"
+    },
+    {
+      "id": "fk8",
+      "from": "grading_revisions",
+      "to": "sections",
+      "definition": "FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk9",
+      "from": "private_jobs",
+      "to": "students",
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk10",
+      "from": "scores",
+      "to": "components",
+      "definition": "FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT"
+    },
+    {
+      "id": "fk11",
+      "from": "scores",
+      "to": "enrollments",
+      "definition": "FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk12",
+      "from": "sections",
+      "to": "students",
+      "definition": "FOREIGN KEY (creator_id) REFERENCES students(id) ON DELETE SET NULL"
+    },
+    {
+      "id": "fk13",
+      "from": "deadline_notifications",
+      "to": "students",
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE"
+    },
+    {
+      "id": "fk14",
+      "from": "deadline_notifications",
+      "to": "sections",
+      "definition": "FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE"
+    }
+  ],
+  "figures": [
+    {
+      "number": 1,
+      "slug": "system-architecture",
+      "title": "System architecture",
+      "caption": "Four-layer architecture of the current repository. LIFF REST traffic reaches Express directly; LINE mediates identity and chat. Tesseract runs locally in the app container. Gemini is optional and consent-gated. GitHub Actions runs the separate deadline evaluator.",
+      "width": 1600,
+      "height": 1310,
+      "svg": "exports/01-system-architecture.svg",
+      "png": "exports/01-system-architecture.png"
+    },
+    {
+      "number": 2,
+      "slug": "core-erd",
+      "title": "Core entity-relationship diagram",
+      "caption": "Core ERD showing seven domain tables, their fields and eight core foreign keys. Child-to-parent FK arrows carry parent/child multiplicities; composite score and attendance keys enforce matching sections. Creator attribution is detailed in Figure 3.",
+      "width": 1600,
+      "height": 1510,
+      "svg": "exports/02-core-erd.svg",
+      "png": "exports/02-core-erd.png"
+    },
+    {
+      "number": 3,
+      "slug": "supporting-erd",
+      "title": "Supporting entity-relationship diagram",
+      "caption": "Supporting ERD adds five tables and the seven remaining foreign keys, using students and sections as reference anchors. Together Figures 2 and 3 cover 12 physical tables, 89 columns and 15 foreign keys. Private records cascade; shared creator/actor attribution becomes null.",
+      "width": 1600,
+      "height": 1420,
+      "svg": "exports/03-supporting-erd.svg",
+      "png": "exports/03-supporting-erd.png"
+    },
+    {
+      "number": 4,
+      "slug": "context-dfd",
+      "title": "Level-0 DFD / Context Diagram of Rord-Mai",
+      "caption": "Level-0 context DFD in the reference monochrome style. Student, LINE and Gemini exchanges are balanced against Level 1. The context contains one system process and no internal store.",
+      "width": 1600,
+      "height": 1200,
+      "svg": "exports/04-context-dfd.svg",
+      "png": "exports/04-context-dfd.png"
+    },
+    {
+      "number": 5,
+      "slug": "detailed-dfd",
+      "title": "Level-1 DFD of Rord-Mai",
+      "caption": "Level-1 DFD in monochrome Gane-Sarson notation. Eight main processes exchange data with repeated aliases of Student, LINE, Gemini and the application database. D1 includes the domain tables, not a new physical table. Selected processes 2.0, 4.0 and 8.0 are expanded at Level 2.",
+      "width": 1600,
+      "height": 2700,
+      "svg": "exports/05-detailed-dfd.svg",
+      "png": "exports/05-detailed-dfd.png"
+    },
+    {
+      "number": 6,
+      "slug": "system-workflow",
+      "title": "System workflow",
+      "caption": "Student workflow from LINE authentication through independent consent, shared section setup, private entry and comparison. OCR drafts require review. Norm-referenced grade estimates and repeated-course GPAX are explicitly restricted; failures preserve a manual or template path.",
+      "width": 1600,
+      "height": 1410,
+      "svg": "exports/06-system-workflow.svg",
+      "png": "exports/06-system-workflow.png"
+    },
+    {
+      "number": 7,
+      "slug": "consent-lifecycle",
+      "title": "Consent and data lifecycle",
+      "caption": "Consent lifecycle of the current implementation. Storage grant and optional external explanation consent are separate operations. External withdrawal preserves academic data; confirmed storage withdrawal or deletion removes private records and clears shared attribution. Provider records are outside database cascade scope.",
+      "width": 1600,
+      "height": 1320,
+      "svg": "exports/07-consent-lifecycle.svg",
+      "png": "exports/07-consent-lifecycle.png"
+    },
+    {
+      "number": 8,
+      "slug": "line-processing",
+      "title": "LINE intake and deadline delivery",
+      "caption": "Two independent LINE processing flows. Signed consented webhook work commits before acknowledgement; a consentless reminder stays request-local and sends afterward. A separate GitHub Actions runner rechecks eligible academic targets and consent, persists retry keys before sending, and records outcomes.",
+      "width": 1600,
+      "height": 1470,
+      "svg": "exports/08-line-processing.svg",
+      "png": "exports/08-line-processing.png"
+    },
+    {
+      "number": 9,
+      "slug": "level-2-consent",
+      "title": "Level-2 DFD for Process 2.0: Manage Consent",
+      "caption": "Level-2 decomposition of consent and confirmed private deletion. Child interfaces preserve the Student consent request/status and D1 account query, snapshot and update flows of parent 2.0. Deletion is rooted at students; database cascades remove private records and clear shared attribution.",
+      "width": 1600,
+      "height": 1370,
+      "svg": "exports/09-level-2-consent.svg",
+      "png": "exports/09-level-2-consent.png"
+    },
+    {
+      "number": 10,
+      "slug": "level-2-calculations",
+      "title": "Level-2 DFD for Process 4.0: Calculate Results",
+      "caption": "Level-2 calculation decomposition. Owned inputs produce weighted summaries, required target scores, and permitted ordinary stay/withdraw GPAX scenarios. Repeated-course GPAX emits REPEAT_RULE_UNVERIFIED rather than fabricated replacement arithmetic. Child boundary flows match process 4.0.",
+      "width": 1600,
+      "height": 1450,
+      "svg": "exports/10-level-2-calculations.svg",
+      "png": "exports/10-level-2-calculations.png"
+    },
+    {
+      "number": 11,
+      "slug": "level-2-notifications",
+      "title": "Level-2 DFD for Process 8.0: Deadline Notifications",
+      "caption": "Level-2 notification decomposition. Current course, consent and delivery data produce eligible persisted notifications, a bounded LINE push and delivery-state updates. Existing retry keys are reused; no second notification is created for the same student/section. Interfaces balance with process 8.0.",
+      "width": 1600,
+      "height": 1430,
+      "svg": "exports/11-level-2-notifications.svg",
+      "png": "exports/11-level-2-notifications.png"
+    }
+  ]
+}

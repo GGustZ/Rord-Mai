@@ -2,7 +2,7 @@
 const { fail } = require('../lib/errors');
 const { object, uuid } = require('./academic-service');
 const { gpax, gpaxComparison, GRADE_POINTS } = require('../../../../packages/engine/src/gpax');
-const profileDto = r => ({ currentGpa:Number(r.current_gpa),creditsCounted:r.credits_counted,
+const profileDto = r => ({ currentGpa:r.current_gpa === null ? null : Number(r.current_gpa),creditsCounted:r.credits_counted,
   academicYear:r.academic_year,semester:r.semester });
 const createGpaxService = ({ consentService }) => {
   const getProfile = ({ identity }) => consentService.withStorageConsent({identity},async({client,studentId})=>{
@@ -12,9 +12,10 @@ const createGpaxService = ({ consentService }) => {
   });
   const saveProfile = ({ identity,input }) => {
     object(input,['currentGpa','creditsCounted','academicYear','semester']);
-    if(!Number.isFinite(input.currentGpa)||input.currentGpa<0||input.currentGpa>4||
+    const noBaseline=input.currentGpa===null&&input.creditsCounted===null;
+    if((!noBaseline&&(!Number.isFinite(input.currentGpa)||input.currentGpa<0||input.currentGpa>4||
       !Number.isInteger(input.creditsCounted)||input.creditsCounted<0||input.creditsCounted>2147483647||
-      (input.creditsCounted===0&&input.currentGpa!==0)||!Number.isInteger(input.academicYear)||
+      (input.creditsCounted===0&&input.currentGpa!==0)))||!Number.isInteger(input.academicYear)||
       input.academicYear<1||input.academicYear>9999||![1,2,3].includes(input.semester))throw fail('VALIDATION_ERROR');
     return consentService.withStorageConsent({identity},async({client,studentId})=>profileDto((await client.query(
       `INSERT INTO academic_profiles(student_id,current_gpa,credits_counted,academic_year,semester) VALUES ($1,$2,$3,$4,$5)
@@ -40,7 +41,7 @@ const createGpaxService = ({ consentService }) => {
       }
     }
     const profile=(await client.query('SELECT * FROM academic_profiles WHERE student_id=$1',[studentId])).rows[0];
-    if(!profile)throw fail('PROFILE_REQUIRED');
+    if(!profile||profile.current_gpa===null||profile.credits_counted===null)throw fail('PROFILE_REQUIRED');
     const enrollments=(await client.query(`SELECT e.id,e.previous_grade_point,s.credits FROM enrollments e
       JOIN sections s ON s.id=e.section_id WHERE e.student_id=$1 ORDER BY s.id FOR SHARE OF s`,[studentId])).rows;
     const byId=new Map(enrollments.map(r=>[r.id,r]));

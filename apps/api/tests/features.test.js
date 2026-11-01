@@ -42,6 +42,16 @@ test('push retries carry the same key and accept only a verified duplicate respo
   fetchImpl.mockRejectedValue(Error('network'));await expect(client.push('user','text','key')).rejects.toMatchObject({retryable:true});
   expect(deadlineCutoff('2026-10-07').toISOString()).toBe('2026-10-07T16:59:59.999Z');
 });
+
+test('LINE push supports Flex objects without changing text-message callers',async()=>{
+  const fetchImpl=jest.fn().mockResolvedValue({ok:true});
+  const client=createLineMessaging({accessToken:'test-only',fetchImpl});
+  const card={type:'flex',altText:'Academic Risk Alert',contents:{type:'bubble',body:{type:'box',layout:'vertical',contents:[{type:'text',text:'Test'}]}}};
+  await client.push('user',card,'same-retry-key');
+  expect(JSON.parse(fetchImpl.mock.calls[0][1].body).messages).toEqual([card]);
+  await client.push('user','Legacy text','same-retry-key');
+  expect(JSON.parse(fetchImpl.mock.calls[1][1].body).messages).toEqual([{type:'text',text:'Legacy text'}]);
+});
 test('syllabus parsing uses Thai/English percentages, warns on gaps and never produces a saved section',()=>{
   const result=parseSyllabus('Midterm 40%\nงาน ๖๐%\nTotal 100%');
   expect(result.components.map(c=>c.weightPercent)).toEqual([40,60]);expect(result.requiresConfirmation).toBe(true);

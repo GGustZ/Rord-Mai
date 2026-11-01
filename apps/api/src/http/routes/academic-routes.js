@@ -4,6 +4,9 @@ const { validateCreateSectionBody } = require('../middleware/validate-create-sec
 const { validateJoinSection } = require('../middleware/validate-join-section');
 const createAcademicRouter=(service)=>{
   const router=express.Router();
+  router.post('/sections/preview',validateJoinSection,async(req,res)=>{
+    res.json({data:await service.previewSection({identity:req.identity,code:req.validated.joinCode})});
+  });
   router.post('/sections',validateCreateSectionBody,async(req,res)=>{
     const result=await service.createSection({identity:req.identity,input:req.validated});
     res.status(201).location('/api/v1/sections/'+result.section.id).json({data:result});

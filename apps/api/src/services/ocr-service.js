@@ -9,22 +9,22 @@ const {fail}=require('../lib/errors');
 const execute=promisify(execFile);
 const MAX_BYTES=5*1024*1024,MAX_PIXELS=10000000;
 const parseSyllabus=text=>{
-  const components=[],warnings=['ตรวจสอบชื่อรายการ น้ำหนัก คะแนนเต็ม และชนิดการบันทึกทุกช่องก่อนยืนยัน'];
+  const components=[],warnings=['Check every assessment name, weight, maximum score and input type before confirming.'];
   const normalized=text.replace(/[๐-๙]/g,c=>String(c.charCodeAt(0)-'๐'.charCodeAt(0)));
   for(const line of normalized.split(/\r?\n/)){
     // ponytail: explicit percentage rows only; add layout-aware parsing after real syllabus fixtures show a need.
     const matches=[...line.matchAll(/(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:%|เปอร์เซ็นต์|ร้อยละ)/g)];
-    if(matches.length!==1){if(matches.length>1)warnings.push('ข้ามแถวที่มีเปอร์เซ็นต์หลายค่า กรุณาตรวจสอบภาพ');continue;}
+    if(matches.length!==1){if(matches.length>1)warnings.push('Rows with multiple percentages were skipped. Check the image.');continue;}
     const match=matches[0],weightPercent=Number(match[1].replace(',','.'));
     const name=line.slice(0,match.index).replace(/^[\s|•\-\d.()]+/,'').replace(/[|:\s]+$/,'').trim();
     if(!name||/^(?:total|รวม)/i.test(name)||weightPercent<=0||weightPercent>100)continue;
-    if(name.length>100||components.some(c=>c.name===name)){warnings.push('พบชื่อรายการซ้ำหรือยาวเกินไป กรุณาแก้ไขด้วยตนเอง');continue;}
+    if(name.length>100||components.some(c=>c.name===name)){warnings.push('พบชื่อรายการซ้ำหรือยาวexcessไป กรุณาแก้ไขด้วยตนเอง');continue;}
     components.push({name,weightPercent,maximumScore:100,inputType:'marks'});
     if(components.length>30)throw fail('EXTRACTION_FAILED');
   }
   if(!components.length)throw fail('EXTRACTION_FAILED');
-  if(components.reduce((sum,c)=>sum+Math.round(c.weightPercent*100),0)!==10000)warnings.push('น้ำหนักที่อ่านได้ยังรวมไม่ครบ 100% กรุณาแก้ไขก่อนบันทึก');
-  warnings.push('คะแนนเต็มตั้งต้นคือ 100 และชนิดตั้งต้นคือคะแนนสอบ กรุณาเทียบกับ syllabus โดยเฉพาะรายการเช็คชื่อ');
+  if(components.reduce((sum,c)=>sum+Math.round(c.weightPercent*100),0)!==10000)warnings.push('Extracted weights do not total 100%. Correct them before saving.');
+  warnings.push('Maximum scores default to 100 and input types to marks. Verify these against the syllabus, especially attendance.');
   return {components,warnings,requiresConfirmation:true};
 };
 const recognize=async(file,executable)=>{

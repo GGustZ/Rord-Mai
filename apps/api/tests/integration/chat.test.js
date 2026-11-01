@@ -73,7 +73,7 @@ test('QUEUE-002: new worker resumes accepted confirmation without a second mutat
 test('QUEUE-003: pre-consent content persists neither student nor job nor conversation', async () => {
   await consent.deleteData({ identity: a });
   await send('my score is 83');
-  expect(lastReply()).toContain('ยินยอมให้จัดเก็บข้อมูล');
+  expect(lastReply()).toContain('allow academic storage');
   for (const table of ['private_jobs', 'conversation_state']) expect((await pool.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
   expect((await pool.query('SELECT 1 FROM students WHERE line_user_id=$1', [a.lineUserId])).rows).toEqual([]);
 });

@@ -70,6 +70,18 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
       return {section:(await readSection(client,sectionId,studentId)).section,enrollment:enrollmentDto(row)};
     });
   };
+  const previewSection = async ({identity,code}) => {
+    if(typeof code!=='string'||! /^[A-Z0-9]{6}$/.test(code.trim().toUpperCase())) throw fail('VALIDATION_ERROR');
+    return guarded(identity,async({client,studentId})=>{
+      const row=(await client.query('SELECT id FROM sections WHERE join_code=$1 FOR SHARE',[code.trim().toUpperCase()])).rows[0];
+      if(!row)throw fail('SECTION_NOT_FOUND');
+      const {section}=await readSection(client,row.id,studentId);
+      // Invitation previews disclose shared grading only, never ownership or private records.
+      delete section.canEdit;
+      const enrollment=(await client.query('SELECT id FROM enrollments WHERE student_id=$1 AND section_id=$2',[studentId,row.id])).rows[0];
+      return {section,enrollmentId:enrollment?.id??null};
+    });
+  };
   const joinSection = async ({identity,code}) => {
     if(typeof code!=='string'||! /^[A-Z0-9]{6}$/.test(code.trim().toUpperCase())) throw fail('VALIDATION_ERROR');
     return guarded(identity,async({client,studentId})=>{
@@ -191,6 +203,6 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
       return {componentId,attended:input.attended,totalSessions:input.totalSessions,updatedAt:saved.updated_at};
     });
   };
-  return {createSection,joinSection,getSection,reviseWeights,detail,summary,updateTarget,writeComponent};
+  return {createSection,previewSection,joinSection,getSection,reviseWeights,detail,summary,updateTarget,writeComponent};
 };
 module.exports = {createAcademicService, uuid, object, calculationInput};

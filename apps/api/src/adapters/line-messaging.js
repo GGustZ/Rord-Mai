@@ -22,7 +22,7 @@ const createLineMessaging = ({ accessToken, fetchImpl = fetch }) => ({
       response=await fetchImpl('https://api.line.me/v2/bot/message/push',{
         method:'POST',signal:AbortSignal.timeout(5000),redirect:'error',
         headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json','X-Line-Retry-Key':retryKey},
-        body:JSON.stringify({to:userId,messages:[{type:'text',text}]}),
+        body:JSON.stringify({to:userId,messages:[typeof text==='string'?{type:'text',text}:text]}),
       });
     }catch{throw Object.assign(new Error('LINE push unavailable.'),{retryable:true});}
     if(response.ok||(response.status===409&&response.headers.get('x-line-accepted-request-id')))return;

@@ -1,6 +1,7 @@
 'use strict';
 const {createAcademicService,calculationInput}=require('./academic-service');
 const {targetCalculation}=require('../adapters/engine');
+const {notificationCard}=require('./notification-card');
 const deadlineCutoff=date=>new Date(date+'T23:59:59.999+07:00');
 const eligible=(detail,now)=>detail.section.gradingMode==='criterion'&&detail.enrollment.targetGrade!==null&&
   now<deadlineCutoff(detail.section.withdrawalDeadline)&&!targetCalculation(calculationInput(detail),detail.enrollment.targetGrade).reachable;
@@ -33,9 +34,9 @@ const createNotificationService=({pool,consentService,messaging,liffId,now=()=>n
               if(existing)await ctx.client.query("UPDATE deadline_notifications SET status='cancelled' WHERE id=$1",[existing.id]);
               return null;
             }
-            const message=`เป้าหมายเกรดที่บันทึกสำหรับ ${d.section.courseCode} ไม่สามารถทำได้ตามข้อมูลที่ประเมิน กรุณาตรวจสอบข้อมูลก่อนกำหนดถอน ${d.section.withdrawalDeadline}\nนี่เป็นประมาณการ ไม่ใช่คำแนะนำให้ถอนรายวิชา\nhttps://liff.line.me/${liffId}`;
-            const record=existing||(await ctx.client.query(`INSERT INTO deadline_notifications(student_id,section_id,message)
-              VALUES ($1,$2,$3) RETURNING *`,[ctx.studentId,candidate.section_id,message])).rows[0];
+            const message=`Your saved target for ${d.section.courseCode} is not achievable with the recorded scores. Review your entries before ${d.section.withdrawalDeadline}. This is not advice to withdraw.\nhttps://liff.line.me/${liffId}`;
+            const record=existing||(await ctx.client.query(`INSERT INTO deadline_notifications(student_id,section_id,message,message_payload)
+              VALUES ($1,$2,$3,$4) RETURNING *`,[ctx.studentId,candidate.section_id,message,notificationCard(d,liffId)])).rows[0];
             if(record.attempts>=3){await ctx.client.query("UPDATE deadline_notifications SET status='failed' WHERE id=$1",[record.id]);return null;}
             const next=new Date(now().getTime()+(record.attempts===0?60000:300000));
             return (await ctx.client.query('UPDATE deadline_notifications SET attempts=attempts+1,next_attempt_at=$2 WHERE id=$1 RETURNING *',[record.id,next])).rows[0];
@@ -51,7 +52,7 @@ const createNotificationService=({pool,consentService,messaging,liffId,now=()=>n
             }
             // Student lock covers the bounded send, so withdrawal cannot race delivery.
             try{
-              await messaging.push(identity.lineUserId,record.message,record.retry_key);
+              await messaging.push(identity.lineUserId,record.message_payload||record.message,record.retry_key);
               await ctx.client.query("UPDATE deadline_notifications SET status='sent' WHERE id=$1",[record.id]);counts.sent++;
             }catch(error){
               if(!error.retryable||record.attempts>=3){

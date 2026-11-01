@@ -30,7 +30,7 @@ const fixture = async () => {
 };
 test('migrations rerun without applying versions again', async () => {
   expect(await migrate(pool)).toEqual([]);
-  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(6);
+  expect(Number((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(7);
 });
 test('migration down/reapply succeeds in a separate disposable schema', async () => {
   const client = await pool.connect();

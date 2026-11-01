@@ -16,6 +16,58 @@ Students choose storage and external explanations separately. Course structures 
 
 The 30 October candidate adds explicit weight shortfall/excess messages on creation and correction, separate consent endpoints with compatibility for the old route, post-acknowledgement consent reminders, a Recharts comparison, engine-produced numeric delta, a withdrawal-considerations panel, a separate optional second consent screen and Thai interface copy. HTTP verification tests use the production token verifier with controlled provider responses.
 
+## System design figures
+
+All figures use a consistent white background with black text, outlines and data-flow arrows. Shared typography and line styling follow the reference DFD, while each diagram retains its own notation.
+
+The figures below describe repository baseline `639686b`, prepared on 1 November 2026. The [HTML diagram pack](diagrams/rord-mai-diagrams.html) provides selectable figures and individual SVG/PNG exports; the [combined PDF](diagrams/rord-mai-report-diagrams.pdf) contains 11 pages. The five DFD pages also have an [editable draw.io source](diagrams/rord-mai-dfds.drawio). These describe the implemented candidate and do not substitute for deployment, team review or participant UAT evidence.
+
+![Figure 1. System architecture](diagrams/exports/01-system-architecture.png)
+
+**Figure 1. System architecture.** The four logical layers are the LIFF/chat client, LINE platform, Node.js application and PostgreSQL. LIFF REST calls reach Express directly. Tesseract is local to the application container, Gemini is an optional external processor, and GitHub Actions runs the separate notification evaluator.
+
+![Figure 2. Core entity-relationship diagram](diagrams/exports/02-core-erd.png)
+
+**Figure 2. Core ERD.** Shared sections and components are distinct from private enrollments, scores, attendance and academic profiles. Composite foreign keys force each score or attendance entry to reference an enrollment and component from the same section. Missing marks remain unrecorded rather than become zero.
+
+![Figure 3. Supporting entity-relationship diagram](diagrams/exports/03-supporting-erd.png)
+
+**Figure 3. Supporting ERD.** Consent evidence remains on students; supporting tables hold revisions, short-lived conversation/job data, notification delivery state and technical migration checksums. Figures 2 and 3 together cover all 12 tables, 89 columns and 15 foreign keys. Child-to-parent arrows and endpoint multiplicities distinguish required references from optional creator/actor attribution.
+
+![Figure 4. Context data-flow diagram](diagrams/exports/04-context-dfd.png)
+
+**Figure 4. Level-0 context DFD.** Students exchange academic inputs, consent choices, requests and results with process 0. LINE supplies identity verification, signed events and delivery responses; Gemini receives only consented aggregate metrics. The diagram uses the supplied monochrome reference style, shows no internal data store, and balances its external data flows with Level 1.
+
+![Figure 5. Detailed data-flow diagram](diagrams/exports/05-detailed-dfd.png)
+
+**Figure 5. Level-1 DFD.** Processes 1.0-8.0 cover identity, consent, academic records, calculations, local OCR, explanations, chat and deadline notifications. Repeated Student/LINE/Gemini entities and D1 store symbols are aliases. D1 is the logical domain data store backed by the actual PostgreSQL tables; it is not a new physical table. External entities never directly access it. Numbered process headers and open-ended stores distinguish the standard DFD symbols.
+
+![Figure 6. System workflow](diagrams/exports/06-system-workflow.png)
+
+**Figure 6. System workflow.** The student authenticates, chooses storage and optional external consent, creates or joins a shared section, records private inputs and views estimates. OCR drafts require review and confirmation; invalid inputs return correction paths, model errors use templates, and repeated-course GPAX remains blocked.
+
+![Figure 7. Consent and data lifecycle](diagrams/exports/07-consent-lifecycle.png)
+
+**Figure 7. Consent and data lifecycle.** Turning off external explanations preserves academic records. Confirmed storage withdrawal or account deletion removes private records, while shared structure/history survives with creator/actor attribution cleared. Database cascades do not erase provider records, hosting logs or backups.
+
+![Figure 8. LINE processing flows](diagrams/exports/08-line-processing.png)
+
+**Figure 8. LINE processing.** Consented work is committed before webhook acknowledgement; a consentless reminder is request-local and sent afterward. The independent scheduled runner rechecks eligibility and consent, persists retry keys before sending, and records outcomes to prevent duplicate notifications.
+
+![Figure 9. Level-2 DFD for consent](diagrams/exports/09-level-2-consent.png)
+
+**Figure 9. Level-2 DFD for process 2.0.** Processes 2.1-2.6 validate consent requests, read current evidence, apply storage/external changes, perform confirmed private deletion and return state. The Student and D1 boundary data flows match process 2.0. Storage deletion is rooted at the student record; private cascades and cleared shared attribution follow the existing database relationships.
+
+![Figure 10. Level-2 DFD for calculations](diagrams/exports/10-level-2-calculations.png)
+
+**Figure 10. Level-2 DFD for process 4.0.** Processes 4.1-4.6 load owned inputs, derive weighted totals and required scores, validate ordinary GPAX outcomes, compute the paired delta and assemble results. The service owns data access; the pure engine performs arithmetic. Repeated-course scenarios emit `REPEAT_RULE_UNVERIFIED`. The child preserves process 4.0's request, result, query and input interfaces.
+
+![Figure 11. Level-2 DFD for notifications](diagrams/exports/11-level-2-notifications.png)
+
+**Figure 11. Level-2 DFD for process 8.0.** Processes 8.1-8.5 select candidates, recheck eligibility, persist a retry key before delivery, recheck consent before the LINE push and record the outcome. Its D1 reads/updates and LINE push/response interfaces balance with process 8.0. The schedule triggers execution but is not drawn as a data-flow arrow.
+
+**Hosted-version qualification.** On 1 November 2026 the older `c27a694` Render build was restarted with a new empty database; public health/readiness checks passed. The latest repository candidate was not deployed by that recovery. The full signed-in journey, real scheduled delivery and participant acceptance remain separate unrecorded results.
+
 ## Calculation example
 
 For an 80/100 exam weighted 40%, current weighted points are `80/100 × 40 = 32`. Reaching an 80-point target with 60% remaining requires `(80 − 32)/60 × 100 = 80%` in the remaining work.
