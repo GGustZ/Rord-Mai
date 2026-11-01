@@ -1,0 +1,28 @@
+# Data inventory
+
+PRV-03 candidate, 30 October 2026. These are the fields actually defined by migrations 001–006. The project's proposed basis is explicit storage consent for private academic processing and a separate optional choice for external explanations. This describes implemented controls, not a legal-compliance certification. Team review must confirm responsible contact, notice, lawful basis, retention dates, actual hosting region and provider destinations before participant collection.
+
+| Store and every field | Purpose and proposed basis | Destination and deletion |
+|---|---|---|
+| `students`: id, line_user_id, created_at, updated_at, storage_consent, storage_policy_version, storage_consented_at, cross_border_explanation, explanation_consented_at | Verified account mapping and evidence of independent choices; explicit user consent. No name or student number field. | PostgreSQL on configured host; confirmed storage withdrawal/account deletion removes row. |
+| `academic_profiles`: student_id, current_gpa, credits_counted, academic_year, semester | Self-reported GPAX inputs; storage consent. | PostgreSQL; cascades on student deletion. |
+| `enrollments`: id, student_id, section_id, target_grade, created_at, previous_grade_point | Private course membership, target and optional repeat metadata; storage consent. | PostgreSQL; cascades on student deletion. |
+| `scores`: id, enrollment_id, component_id, section_id, score, updated_at | Private recorded assessment marks; storage consent. | PostgreSQL; cascades through enrollment. |
+| `attendance`: enrollment_id, component_id, section_id, attended, total_sessions, updated_at | Private session counts; storage consent. | PostgreSQL; cascades through enrollment. |
+| `sections`: id, join_code, course_code, course_name, section_number, academic_year, semester, credits, grading_mode, withdrawal_deadline, a_min, b_plus_min, b_min, c_plus_min, c_min, d_plus_min, d_min, created_at, updated_at, creator_id, structure_revision | Shared course rules created after storage consent; classmates read the same structure. Do not enter personal data into course names. | PostgreSQL; student deletion clears creator_id and preserves classmates' shared structure. Shared non-identifying records have no automatic expiry. |
+| `components`: id, section_id, name, weight_percent, maximum_score, position, input_type | Shared assessment rules; storage consent when creating/editing. | PostgreSQL; remains with section, cascades if section is removed. |
+| `grading_revisions`: id, section_id, revision, actor_id, previous_weights, new_weights, created_at | Shared weight/type revision history; storage consent. JSON contains component IDs, weights and input types. | PostgreSQL; actor_id becomes null on student deletion; shared history remains. |
+| `conversation_state`: student_id, state, expires_at | Consented chat draft, selection and confirmation state; storage consent. | PostgreSQL; 15-minute inactivity expiry. Worker removes expired rows; student deletion cascades immediately. |
+| `private_jobs`: id, student_id, event_id, kind, payload, expires_at, created_at | Durable signed-event intake, deduplication, reply token and short chat text/response; storage consent. | PostgreSQL; five-minute event expiry, processed payload scrubbed, expired rows cleaned when worker runs; student deletion cascades. No pre-consent job is stored. |
+| `deadline_notifications`: id, student_id, section_id, retry_key, message, attempts, status, next_attempt_at, created_at | Eligible deadline notification and duplicate prevention; storage consent. | PostgreSQL; original LINE identity/message go to LINE only for sending. Records persist to deduplicate until student deletion; no independent automatic expiry. |
+| `schema_migrations`: name, checksum, applied_at | Technical schema integrity; no student data. | PostgreSQL; not linked to student deletion. |
+
+## Transient processing and transfers
+
+LIFF ID tokens remain in SDK/browser memory and pass over HTTPS to the backend and LINE verification service; the application does not write them to localStorage or its database. LINE necessarily processes login/chat and receives reply or push payloads. The application's aggregate-only Gemini restriction does not apply to LINE messaging itself.
+
+OCR accepts one validated PNG/JPEG up to 5 MiB/10 megapixels. The image uses a temporary local processing directory, is removed on success/failure, and is not intentionally sent to an OCR provider. Only a confirmed structure is saved. A container hosted overseas still processes images overseas.
+
+Gemini receives only `kind`, allowlisted aggregate numeric `metrics`, `reasonCode` and `reachable`, after current independent external consent. Names, LINE IDs, section/course IDs, scenario labels, raw marks and images are excluded. Generated text is returned transiently; the app has no explanation-history table. Decline, obsolete consent, timeout or invalid numeric output uses a local template.
+
+The pre-consent reminder holds a reply token only in request memory until its bounded send completes; identity, text and token are not persisted. Application logs use error categories/counts. Hosting access logs, backups, provider retention and restored backups require operator policy; database cascades do not erase external providers' records. Record actual host/region and backup deletion handling before final acceptance. Raw participant accounts and UAT contact details do not belong in the repository.

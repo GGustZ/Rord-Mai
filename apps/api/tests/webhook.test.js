@@ -2,6 +2,7 @@ const request = require('supertest');
 const { createHmac } = require('node:crypto');
 const { createApp } = require('../src/app');
 const { verifySignature, createLineMessaging } = require('../src/adapters/line-messaging');
+const {createChatService} = require('../src/services/chat-service');
 const secret = 'test-only-secret';
 const sign = raw => createHmac('sha256', secret).update(raw).digest('base64');
 const chatService = { accept: jest.fn(), wake: jest.fn() };
@@ -34,6 +35,32 @@ test('QUEUE-006: storage failure returns retryable failure without processing', 
   expect(response.status).toBe(503);
   expect(response.text).not.toContain('private');
   expect(chatService.wake).not.toHaveBeenCalled();
+});
+test('LIN-03: a stalled consent reminder does not delay HTTP acknowledgement',async()=>{
+  let release;
+  const messaging={reply:jest.fn(()=>new Promise(resolve=>{release=resolve;}))};
+  const pool={query:jest.fn().mockResolvedValue({rows:[]})};
+  const chat=createChatService({pool,messaging,liffId:'123-test',consentService:{withStorageConsent:async()=>{throw Object.assign(Error(),{code:'STORAGE_CONSENT_REQUIRED'});}}});
+  const isolated=createApp({lineWebhook:{secret,chatService:chat}});
+  const raw=JSON.stringify({events:[{type:'message',source:{type:'user',userId:'U'+'a'.repeat(32)},
+    message:{type:'text',text:'my private marks'},webhookEventId:'test-event',replyToken:'test-reply',timestamp:Date.now()}]});
+  const started=performance.now();
+  try {
+    const response=await request(isolated).post('/webhooks/line').type('json').set('x-line-signature',sign(raw)).send(raw);
+    expect(response.status).toBe(200);expect(performance.now()-started).toBeLessThan(1000);
+    expect(messaging.reply).toHaveBeenCalledTimes(1);
+    expect(pool.query.mock.calls.every(([sql])=>!sql.includes('INSERT'))).toBe(true);
+  } finally { release?.();await chat.stop(); }
+});
+test('LIN-03: acknowledgement still waits for durable acceptance',async()=>{
+  let release,entered;
+  const accepted=new Promise(resolve=>{entered=resolve;});
+  chatService.accept.mockImplementation(()=>{entered();return new Promise(resolve=>{release=resolve;});});
+  let responded=false;
+  const pending=send('{"events":[{}]}').then(response=>{responded=true;return response;});
+  await accepted;
+  expect(responded).toBe(false);expect(chatService.wake).not.toHaveBeenCalled();
+  release();expect((await pending).status).toBe(200);
 });
 test('reply adapter uses only reply API and never exposes provider details on failure', async () => {
   const fetchImpl = jest.fn().mockResolvedValue({ ok: false });

@@ -5,3 +5,5 @@
 @media(prefers-reduced-motion:reduce){button{transition:none}}
 
 .bottom-nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+figure.card { margin: 16px 0; min-width: 0; }

@@ -99,4 +99,17 @@ After the first workflow run exists, configure protection for main:
 - Block force pushes and deletion. Apply the rule to administrators if available.
 - Demonstrate a deliberately failing PR is blocked and a reviewed green PR can merge.
 
-Writing workflow YAML does not configure repository protection. Record remote evidence after authorised GitHub account access is available.
+Writing workflow YAML does not configure repository protection. On 30 October 2026 the branch API reported main unprotected, no required status checks, and no repository rulesets. No settings were changed. Record administrative acceptance after configuration.
+
+## Local demo recording
+
+The opt-in `@demo` browser case uses fictional data and controlled LINE identity, not real provider or participant acceptance. It covers manual setup, marks, target calculation, GPAX comparison, local Thai explanation and confirmed deletion.
+
+```powershell
+$env:RECORD_DEMO='1'
+$env:BROWSER_CHANNEL='msedge'
+npm.cmd --prefix apps/web run test:browser -- --project=desktop --grep '@demo' --workers=1
+Remove-Item Env:RECORD_DEMO
+```
+
+Requires the same disposable `TEST_DATABASE_URL` as other browser tests. Recordings go to ignored browser test results. The reviewed submission candidate is linked from `docs/submission/README.md`. Its 68-second duration includes slower playback for readable captions.

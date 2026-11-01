@@ -1,7 +1,7 @@
 'use strict';
 const { randomInt } = require('node:crypto');
 const { fail } = require('../lib/errors');
-const { validateCreateSection } = require('../lib/validate-create-section');
+const { validateCreateSection, weightTotalMessage } = require('../lib/validate-create-section');
 const { requireOwnedEnrollment, enrollmentDto } = require('../repositories/academic-repository');
 const { GRADE_POINTS } = require('../../../../packages/engine/src/gpax');
 const { courseSummary, targetCalculation } = require('../adapters/engine');
@@ -46,7 +46,7 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
   const guarded = (identity,work) => consentService.withStorageConsent({identity},work);
   const createSection = async ({identity,input}) => {
     const validated=validateCreateSection(input);
-    if(!validated.success) throw fail('VALIDATION_ERROR');
+    if(!validated.success) throw Object.assign(fail('VALIDATION_ERROR'), {details:validated.errors});
     const data=validated.data;
     return guarded(identity,async({client,studentId})=>{
       let sectionId;
@@ -98,7 +98,7 @@ const createAcademicService = ({consentService, generateJoinCode=joinCode}) => {
         Math.abs(c.weightPercent*100-Math.round(c.weightPercent*100))>1e-8) throw fail('VALIDATION_ERROR');
       ids.add(c.id);units+=Math.round(c.weightPercent*100);
     }
-    if(units!==10000) throw fail('VALIDATION_ERROR');
+    if(units!==10000) throw Object.assign(fail('VALIDATION_ERROR'), {details:[{path:'components',message:weightTotalMessage(units)}]});
     return guarded(identity,async({client,studentId})=>{
       const {section,creatorId}=await readSection(client,sectionId,studentId,true);
       if(creatorId!==studentId) throw fail('CREATOR_REQUIRED');

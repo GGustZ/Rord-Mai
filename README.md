@@ -1,5 +1,7 @@
 # Rord Mai
 
+The 30 October candidate adds separate consent endpoints and onboarding choices, explicit weight-gap messages, a Recharts comparison with engine-produced delta, withdrawal considerations and Thai UI copy. See [architecture](docs/architecture.md), [data inventory](docs/privacy-data-inventory.md), [release evidence](docs/testing/release-2026-10-30.md), [UAT protocol](docs/testing/uat-protocol.md) and [final-report candidate](docs/final-report.md). Participant UAT and same-release public acceptance remain pending.
+
 7 October implementation adds cumulative profiles, ordinary GPAX scenarios, repeat metadata, independent explanation consent, complete Thai templates, optional verified-number Gemini wording, native LINE quick replies, deadline notifications and PNG/JPG-only syllabus drafts. Repeated-course GPAX is blocked until the official rule is verified. See [setup](docs/development/setup.md) and the [current contract](docs/api/contract.md). Local implementation does not establish live LINE/Gemini delivery, Docker execution or remote review gates.
 
 ## Project documentation

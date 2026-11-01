@@ -1,7 +1,7 @@
 'use strict';
 const { fail } = require('../lib/errors');
 const { object, uuid } = require('./academic-service');
-const { gpax, GRADE_POINTS } = require('../../../../packages/engine/src/gpax');
+const { gpax, gpaxComparison, GRADE_POINTS } = require('../../../../packages/engine/src/gpax');
 const profileDto = r => ({ currentGpa:Number(r.current_gpa),creditsCounted:r.credits_counted,
   academicYear:r.academic_year,semester:r.semester });
 const createGpaxService = ({ consentService }) => {
@@ -44,11 +44,18 @@ const createGpaxService = ({ consentService }) => {
     const enrollments=(await client.query(`SELECT e.id,e.previous_grade_point,s.credits FROM enrollments e
       JOIN sections s ON s.id=e.section_id WHERE e.student_id=$1 ORDER BY s.id FOR SHARE OF s`,[studentId])).rows;
     const byId=new Map(enrollments.map(r=>[r.id,r]));
-    return {results:input.scenarios.map(scenario=>{
+    const results=input.scenarios.map(scenario=>{
       if(scenario.outcomes.length!==enrollments.length||scenario.outcomes.some(o=>!byId.has(o.enrollmentId)))throw fail('VALIDATION_ERROR');
       if(enrollments.some(r=>r.previous_grade_point!==null))throw fail('REPEAT_RULE_UNVERIFIED');
       return {label:scenario.label,...gpax({...profileDto(profile),courses:scenario.outcomes.map(o=>({...o,credits:byId.get(o.enrollmentId).credits}))})};
-    })};
+    });
+    let comparison=null;
+    if(input.scenarios.length===2){
+      const [stay,withdraw]=input.scenarios.map(s=>new Map(s.outcomes.map(o=>[o.enrollmentId,o])));
+      const changed=[...stay].filter(([id,o])=>o.outcome!==withdraw.get(id)?.outcome||o.grade!==withdraw.get(id)?.grade);
+      if(changed.length===1&&changed[0][1].outcome==='grade'&&withdraw.get(changed[0][0])?.outcome==='withdraw') comparison=gpaxComparison(results);
+    }
+    return {results,comparison};
   };
   const calculate = ({identity,input}) => consentService.withStorageConsent({identity},ctx=>calculateInTransaction(ctx,input));
   return {getProfile,saveProfile,calculate,calculateInTransaction};

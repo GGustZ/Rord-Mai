@@ -7,6 +7,25 @@ const objectWithKeys = (body, allowed) => body !== null && typeof body === 'obje
 const createPrivacyRouter = (service) => {
   const router = express.Router();
   router.get('/consents', async (req, res) => res.json({ data: await service.getConsent({ identity: req.identity }) }));
+  router.put('/consents/storage', async (req, res) => {
+    const body = req.body;
+    if (!objectWithKeys(body, ['storage', 'policyVersion', 'confirmDeletion']) ||
+        typeof body.storage !== 'boolean' || typeof body.policyVersion !== 'string' ||
+        (body.confirmDeletion !== undefined && typeof body.confirmDeletion !== 'boolean')) throw fail('VALIDATION_ERROR');
+    if (body.storage) await service.grantStorageConsent({ identity:req.identity, accepted:true, policyVersion:body.policyVersion });
+    else {
+      if (body.confirmDeletion !== true) throw fail('CONFIRMATION_REQUIRED');
+      await service.deleteData({ identity:req.identity });
+    }
+    res.json({ data:await service.getConsent({ identity:req.identity }) });
+  });
+  router.put('/consents/cross-border-explanation', async (req, res) => {
+    const body = req.body;
+    if (!objectWithKeys(body, ['crossBorderExplanation', 'policyVersion']) ||
+        typeof body.crossBorderExplanation !== 'boolean' || typeof body.policyVersion !== 'string') throw fail('VALIDATION_ERROR');
+    await service.setExplanationConsent({ identity:req.identity, accepted:body.crossBorderExplanation, policyVersion:body.policyVersion });
+    res.json({ data:await service.getConsent({ identity:req.identity }) });
+  });
   router.put('/consents', async (req, res) => {
     const body = req.body;
     if (!objectWithKeys(body, ['storage', 'crossBorderExplanation', 'policyVersion', 'confirmDeletion']) ||

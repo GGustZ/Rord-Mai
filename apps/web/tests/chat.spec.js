@@ -8,8 +8,9 @@ test('signed chat confirmation appears in LIFF; repeated confirmation preserves 
   await page.route('**/src/line-client.js', route => route.fulfill({ contentType: 'application/javascript',
     body: 'export default {init:async()=>{},isLoggedIn:()=>true,getIDToken:()=> ' + JSON.stringify(token) + '};' }));
   await page.goto('/');
-  await page.getByRole('checkbox', { name: /I agree/ }).check();
-  await page.getByRole('button', { name: 'Agree and continue' }).click();
+  await page.getByRole('checkbox', { name: /ฉันยินยอม/ }).check();
+  await page.getByRole('button', { name: 'ยินยอมและดำเนินการต่อ' }).click();
+  await page.getByRole('button', { name: 'ใช้ต่อโดยไม่ใช้ AI', exact:true }).click();
   await createSection(page);
   await expectPoints(page,0);
   let sequence = 0;
@@ -22,8 +23,8 @@ test('signed chat confirmation appears in LIFF; repeated confirmation preserves 
   };
   for (const text of ['score', '1', '1', '80', 'confirm']) await send(text);
   await expect(async () => {
-    await page.getByRole('button', { name: 'Refresh course and weights' }).click();
-    await expect(page.getByText('Raw marks: 80 / 100')).toBeVisible();
+    await page.getByRole('button', { name: 'รีเฟรชรายวิชาและน้ำหนัก' }).click();
+    await expect(page.getByText('คะแนนดิบ: 80 / 100')).toBeVisible();
   }).toPass();
   await expectPoints(page,32);
   await page.screenshot({ path: testInfo.outputPath('chat-saved-in-liff.png'), fullPage: true });
@@ -31,6 +32,6 @@ test('signed chat confirmation appears in LIFF; repeated confirmation preserves 
   await expectPoints(page,28);
   // Signed provider input and fake SDK identity are local harnesses, not a live LINE claim.
   await send('confirm');
-  await page.getByRole('button', { name: 'Refresh course and weights' }).click();
-  await expect(page.getByText('Raw marks: 70 / 100')).toBeVisible();
+  await page.getByRole('button', { name: 'รีเฟรชรายวิชาและน้ำหนัก' }).click();
+  await expect(page.getByText('คะแนนดิบ: 70 / 100')).toBeVisible();
 });

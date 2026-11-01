@@ -90,6 +90,41 @@ test('consent read and decline create no student; repeated grant preserves ident
   expect(second.id).toBe(first.id);
   expect(second.storage_consented_at).toEqual(first.storage_consented_at);
 });
+test('API-07: separate choices preserve independent flags and timestamps, including concurrent grants',async()=>{
+  await grant();
+  expect((await service.getConsent({identity:a})).crossBorderExplanation).toBe(false);
+  await service.setExplanationConsent({identity:a,accepted:true,policyVersion:'v1'});
+  const first=(await pool.query('SELECT * FROM students WHERE line_user_id=$1',[a.lineUserId])).rows[0];
+  await Promise.all([grant(),service.setExplanationConsent({identity:a,accepted:true,policyVersion:'v1'})]);
+  const preserved=(await pool.query('SELECT * FROM students WHERE line_user_id=$1',[a.lineUserId])).rows[0];
+  expect(preserved.cross_border_explanation).toBe(true);
+  expect(preserved.storage_consented_at).toEqual(first.storage_consented_at);
+  expect(preserved.explanation_consented_at).toEqual(first.explanation_consented_at);
+  await service.setExplanationConsent({identity:a,accepted:false,policyVersion:'v1'});
+  expect(await service.getConsent({identity:a})).toMatchObject({storage:true,crossBorderExplanation:false});
+  expect((await pool.query('SELECT explanation_consented_at FROM students WHERE line_user_id=$1',[a.lineUserId])).rows[0].explanation_consented_at).toBeNull();
+});
+test('API-07: external consent never creates or resurrects storage, and stale policy cannot enable it',async()=>{
+  await expect(service.setExplanationConsent({identity:a,accepted:true,policyVersion:'v1'})).rejects.toMatchObject({status:403});
+  expect((await pool.query('SELECT * FROM students')).rows).toHaveLength(0);
+  await service.grantStorageConsent({identity:a,accepted:true,policyVersion:'v1',crossBorderExplanation:true});
+  const newer=createConsentService({pool,currentPolicyVersion:'v2'});
+  await expect(newer.setExplanationConsent({identity:a,accepted:true,policyVersion:'v2'})).rejects.toMatchObject({status:409});
+  await newer.grantStorageConsent({identity:a,accepted:true,policyVersion:'v2'});
+  expect(await newer.getConsent({identity:a})).toMatchObject({storage:true,crossBorderExplanation:false});
+  await newer.deleteData({identity:a});
+  await expect(newer.setExplanationConsent({identity:a,accepted:true,policyVersion:'v2'})).rejects.toMatchObject({status:403});
+});
+test('API-07: separate HTTP endpoints use real consent persistence and confirmed withdrawal',async()=>{
+  const app=createApp({pool,consentService:service,verifyIdentity:async()=>a});
+  const put=(route,body)=>request(app).put('/api/v1/consents/'+route).set('Authorization','Bearer test-only').send(body);
+  expect((await put('storage',{storage:true,policyVersion:'v1'})).body.data).toMatchObject({storage:true,crossBorderExplanation:false});
+  expect((await put('cross-border-explanation',{crossBorderExplanation:true,policyVersion:'v1'})).body.data).toMatchObject({storage:true,crossBorderExplanation:true});
+  expect((await put('storage',{storage:true,policyVersion:'v1'})).body.data.crossBorderExplanation).toBe(true);
+  expect((await put('storage',{storage:false,policyVersion:'v1'})).status).toBe(400);
+  expect((await put('storage',{storage:false,policyVersion:'v1',confirmDeletion:true})).body.data).toMatchObject({storage:false,crossBorderExplanation:false});
+  expect((await put('cross-border-explanation',{crossBorderExplanation:true,policyVersion:'v1'})).status).toBe(403);
+});
 test('invalid policy and absent consent reject without storing data', async () => {
   await expect(service.grantStorageConsent({ identity:a,accepted:true,policyVersion:'old' })).rejects.toMatchObject({ status:409 });
   await expect(service.withStorageConsent({ identity:a },async()=>{})).rejects.toMatchObject({ status:403 });

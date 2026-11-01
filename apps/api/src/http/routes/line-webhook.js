@@ -14,13 +14,19 @@ const createLineWebhook = ({ secret, chatService }) => {
     if (!body || !Array.isArray(body.events) || body.events.length > 100) {
       return res.status(400).json({ error: { code: 'INVALID_WEBHOOK' } });
     }
+    const reminders = [];
     try {
       // Acknowledgement follows durable acceptance, never a fire-and-forget write.
-      for (const event of body.events) await chatService.accept(event);
+      for (const event of body.events) {
+        const reminder = await chatService.accept(event);
+        if (reminder) reminders.push(reminder);
+      }
     } catch {
       return res.status(503).json({ error: { code: 'WEBHOOK_UNAVAILABLE' } });
     }
     res.sendStatus(200);
+    // Consentless reminders stay in this request's memory and never delay acknowledgement.
+    for (const remind of reminders) Promise.resolve().then(remind).catch(() => console.error('Consent reminder unavailable.'));
     chatService.wake();
   });
   return router;

@@ -43,6 +43,9 @@ test('profiles persist per student and scenarios use owned server credits and fu
   await expect(gpax.getProfile({identity:b})).rejects.toMatchObject({code:'RESOURCE_NOT_FOUND'});
   const result=await gpax.calculate({identity:a,input:cases(created.enrollment.id)});
   expect(result.results[0].gpax).toBe(102/33);expect(result.results[1].gpax).toBe(3);expect(result.results[0].creditsCounted).toBe(33);
+  expect(result.comparison).toEqual({stay:102/33,withdraw:3,delta:3-102/33});
+  expect((await gpax.calculate({identity:a,input:{scenarios:[cases(created.enrollment.id).scenarios[0]]}})).comparison).toBeNull();
+  expect((await gpax.calculate({identity:a,input:{scenarios:[...cases(created.enrollment.id).scenarios].reverse()}})).comparison).toBeNull();
   await expect(gpax.calculate({identity:a,input:cases(joined.id)})).rejects.toMatchObject({code:'VALIDATION_ERROR'});
   await expect(async()=>gpax.saveProfile({identity:a,input:{...profile,currentGpa:'3'}})).rejects.toMatchObject({code:'VALIDATION_ERROR'});
 });

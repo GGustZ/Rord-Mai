@@ -1,6 +1,6 @@
 # Rord-Mai integration interfaces
 
-Updated 7 October 2026: profile/GPAX, repeat metadata, separate explanation consent, templates/Gemini fallback, image-only OCR drafts and deadline pushes are implemented locally. See the [current API contract](../api/contract.md). The original teammate engine handoff was a written document, not runnable source; preserve that attribution. Real provider, container, scheduling and team-review gates remain separate.
+Updated 30 October 2026: separate consent endpoints, optional second consent screen, Thai copy, comparison chart/delta and post-acknowledgement consent reminders are implemented. Original 7 October behavior: profile/GPAX, repeat metadata, separate explanation consent, templates/Gemini fallback, image-only OCR drafts and deadline pushes are implemented locally. See the [current API contract](../api/contract.md). The original teammate engine handoff was a written document, not runnable source; preserve that attribution. Real provider, container, scheduling and team-review gates remain separate.
 
 The sections below retain the September integration history. Where they describe profile processing or external consent as deferred, the current contract supersedes those historical statements. Migration 006 implements counted-credit naming, repeat metadata, independent explanation consent and deletion-linked notification records. Existing private-data and shared-structure rules remain.
 
@@ -15,7 +15,7 @@ Implemented screens: consent, course list, create/join, varied grading structure
 
 GET /api/config exposes only liffId and policyVersion.
 GET /api/v1/consents does not create a student.
-PUT /api/v1/consents grants storage with {storage:true,crossBorderExplanation:false,policyVersion}.
+PUT /api/v1/consents/storage grants storage with {storage:true,policyVersion}; external consent defaults off for new identities and is preserved on current-policy reacceptance. PUT /api/v1/consents/cross-border-explanation changes only {crossBorderExplanation,policyVersion}. The original combined PUT /consents remains supported.
 Withdrawal uses storage:false with confirmDeletion:true.
 DELETE /api/v1/me/data requires JSON {confirmDeletion:true}, then returns 204.
 This explicit request confirmation is an intentional contract amendment.
@@ -43,7 +43,7 @@ listOwnedEnrollments uses creation-time/UUID keyset pagination with an opaque cu
 requireCurrentJob checks original student UUID and unexpired job existence. Workers must not revive stale work by resolving only the LINE user ID after a fresh consent grant.
 
 Migration 003 adds deletion-linked private tables and nullable shared creator/revision attribution.
-Migration 003 does not implement features by itself. The academic service implements attendance and grading corrections; chat now uses its conversation_state/private_jobs tables. Profile processing remains deferred. Migration 004 adds component order and an enrolment pagination index.
+Migration 003 does not implement features by itself. The academic service implements attendance and grading corrections; chat now uses its conversation_state/private_jobs tables. Profiles and ordinary GPAX processing are implemented; repeat GPAX remains blocked. Migration 004 adds component order and an enrolment pagination index.
 Foreign keys cascade private data on student deletion. Shared sections remain, with creator and revision actors cleared.
 No identifiable deletion audit remains. Future writers and tables must extend deletion tests before becoming available.
 
@@ -51,7 +51,7 @@ No identifiable deletion audit remains. Future writers and tables must extend de
 
 POST /webhooks/line verifies HMAC-SHA256 over raw bytes before parsing, separately from LIFF bearer authentication. Invalid signatures return 401, malformed signed JSON returns 400, unavailable durable acceptance returns 503. Empty events supports provider verification. Non-text and non-private events are ignored. Both Messaging API variables must be present to enable chat; a partial pair stops startup.
 
-Only consented direct-message text enters private_jobs, with webhookEventId uniqueness, original student UUID and 5-minute expiry based on event time. Events predating the current consent grant are ignored. Pre-consent replies link to LIFF without persisting identity/text/jobs. Raw webhook bodies are never stored. Text over 100 characters becomes help rather than truncated academic input.
+Only consented direct-message text enters private_jobs, with webhookEventId uniqueness, original student UUID and 5-minute expiry based on event time. Events predating the current consent grant are ignored. Pre-consent replies link to LIFF after HTTP acknowledgement without persisting identity/text/jobs. Intake returns a request-local reminder callback; callers outside the webhook must explicitly invoke it after acceptance. Raw webhook bodies are never stored. Text over 100 characters becomes help rather than truncated academic input.
 
 The worker locks the original student before the job. It calls createAcademicService through an internal transaction-local consent adapter so all operations use the same client and lock. Score mutation, draft transition and line.reply status commit together. REST receives no transaction/bypass parameter.
 

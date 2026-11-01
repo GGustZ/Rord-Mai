@@ -20,7 +20,7 @@ let chat, messaging, created, joined, sequence;
 const event = (text, identity = a) => ({ type: 'message', message: { type: 'text', text }, source: { type: 'user', userId: identity.lineUserId },
   timestamp: Date.now() + ++sequence, webhookEventId: randomUUID(), replyToken: randomUUID() });
 const makeChat = () => createChatService({ pool, consentService: consent, messaging, liffId: '123-test' });
-const send = async (text, identity = a) => { const e = event(text, identity); await chat.accept(e); await chat.drain(); return e; };
+const send = async (text, identity = a) => { const e = event(text, identity); const reminder=await chat.accept(e); if(reminder)await reminder(); await chat.drain(); return e; };
 const draft = async (score = '80', identity = a) => { for (const text of ['score', '1', '1', score]) await send(text, identity); };
 const lastReply = () => messaging.reply.mock.calls.at(-1)?.[1];
 const detail = (identity = a, enrollmentId = created.enrollment.id) => academic.detail({ identity, enrollmentId });
@@ -73,7 +73,7 @@ test('QUEUE-002: new worker resumes accepted confirmation without a second mutat
 test('QUEUE-003: pre-consent content persists neither student nor job nor conversation', async () => {
   await consent.deleteData({ identity: a });
   await send('my score is 83');
-  expect(lastReply()).toContain('accept storage consent');
+  expect(lastReply()).toContain('ยินยอมให้จัดเก็บข้อมูล');
   for (const table of ['private_jobs', 'conversation_state']) expect((await pool.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
   expect((await pool.query('SELECT 1 FROM students WHERE line_user_id=$1', [a.lineUserId])).rows).toEqual([]);
 });
