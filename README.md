@@ -57,3 +57,5 @@ npm run check:consent:race
 ```
 
 These checks create temporary records and clean up their own data. They run separately from `npm test`. The race check covers withdrawal-first ordering, not a complete withdrawal endpoint or data-deletion workflow.
+
+Public calculation API documentation and an external-browser example are served at /api-docs. Save that page locally and set its API origin to call the service from outside the LINE app.

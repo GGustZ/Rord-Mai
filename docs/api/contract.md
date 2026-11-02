@@ -97,3 +97,6 @@ OcrDraft = {components:ComponentInput[], warnings:string[], requiresConfirmation
 
 API-01: conventions about years, semester 3, integer credits, 30 components and creator enrollment are explicit pilot decisions. Creator weight revision and confirmed deletion supersede the earlier immutable-structure and empty-deletion-request proposals. Team reconciliation remains required.
 API-02: HTTP application/server separation, routing, JSON parsing, create/join validation, consistent errors, configurable port, and regression tests. Future feature implementation belongs to API-03 onward, data migrations to DAT-02, identity integration to LINE work, and CI to INF-05. Do not mark those tasks done from passing skeleton tests.
+
+## Public calculation API
+POST /api/v1/calculations/summary and /api/v1/calculations/target are public exceptions to the authentication rule above. See /api-docs for the full request contract, runnable browser client, limits and examples. These routes use caller-supplied values only and do not access stored academic records. Target calculations require criterion grading. Shared capacity is 120 requests/minute/process; request bodies are capped at 16 KiB.

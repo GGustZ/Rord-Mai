@@ -27,6 +27,8 @@ const createApp = ({ verifyIdentity, consentService, academicService, pool, publ
 
     // LINE signs raw bytes. Mount before the REST JSON parser and bearer authentication.
     if (lineWebhook) app.use('/webhooks/line', createLineWebhook(lineWebhook));
+    app.use('/api/v1/calculations', require('./http/routes/calculation-routes').createCalculationRouter());
+    app.get('/api-docs', (_req,res)=>res.sendFile(path.join(__dirname,'public/calculations.html')));
     app.use(express.json({ limit: '100kb', strict: false }));
 
     app.get('/health', (_req, res) => {
