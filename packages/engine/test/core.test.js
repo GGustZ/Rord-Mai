@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { summarize, target } = require('../src');
+const { gpax, gpaxComparison } = require('../src/gpax');
 const input = (score=80,weight=40) => ({gradingMode:'norm',gradeThresholds:null,components:[
   {id:'mid',weightPercent:weight,maximumScore:100,score},
   {id:'final',weightPercent:100-weight,maximumScore:100,score:null},
@@ -37,4 +38,14 @@ test('decimal weights and invalid totals',()=>{
 test('numeric strings, nonfinite scores and duplicate components fail',()=>{
   assert.throws(()=>summarize(input('80')));assert.throws(()=>summarize(input(Infinity)));
   const data=input();data.components[1].id='mid';assert.throws(()=>summarize(data));
+});
+test('zero-weight components are rejected even when total is 100',()=>{
+  assert.throws(()=>summarize(input(80,0)));
+});
+test('repeat-course calculations stay blocked until an official rule is verified',()=>{
+  assert.throws(()=>gpax({currentGpa:3,creditsCounted:30,courses:[{credits:3,outcome:'grade',grade:'A',repeat:{previousGradePoint:0}}]}),{code:'REPEAT_RULE_UNVERIFIED'});
+});
+test('paired GPAX delta is withdrawal minus staying and handles no denominator',()=>{
+  assert.deepEqual(gpaxComparison([{gpax:3.25},{gpax:3}]),{stay:3.25,withdraw:3,delta:-0.25});
+  assert.equal(gpaxComparison([{gpax:3},{gpax:null}]).delta,null);
 });

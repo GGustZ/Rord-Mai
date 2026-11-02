@@ -7,7 +7,7 @@ const errorHandler = (error, _req, res, next) => {
         return res.status(400).json({
             error: {
                 code: 'INVALID_JSON',
-                message: 'The request body must contain valid JSON.',
+                message: 'The request body must be valid JSON.',
             },
         });
     }
@@ -16,23 +16,24 @@ const errorHandler = (error, _req, res, next) => {
         return res.status(413).json({
             error: {
                 code: 'PAYLOAD_TOO_LARGE',
-                message: 'The request body exceeds the allowed size.',
+                message: 'The request body is too large.',
             },
         });
     }
 
     const consentErrors = {
-        UNAUTHENTICATED: { status: 401, message: 'Verified LINE identity is required.' },
-        EXPLICIT_CONSENT_REQUIRED: { status: 400, message: 'Explicit storage consent is required.' },
+        UNAUTHENTICATED: { status: 401, message: 'Sign in with a verified LINE identity.' },
+        EXPLICIT_CONSENT_REQUIRED: { status: 400, message: 'Explicit storage permission is required.' },
         POLICY_VERSION_OUTDATED: { status: 409, message: 'Accept the current storage policy.' },
-        STORAGE_CONSENT_REQUIRED: { status: 403, message: 'Storage consent is required.' },
+        STORAGE_CONSENT_REQUIRED: { status: 403, message: 'Allow academic storage before using this feature.' },
     };
     const { messages } = require('../../lib/errors');
     for (const [code, [status, message]] of Object.entries(messages)) consentErrors[code] = { status, message };
     const knownError = Object.hasOwn(consentErrors, error.code) ? consentErrors[error.code] : undefined;
     if (knownError && error.status === knownError.status) {
         return res.status(knownError.status).json({
-            error: { code: error.code, message: knownError.message },
+            error: { code: error.code, message: knownError.message,
+                ...(error.code === 'VALIDATION_ERROR' && Array.isArray(error.details) ? { details: error.details } : {}) },
         });
     }
 
@@ -42,7 +43,7 @@ const errorHandler = (error, _req, res, next) => {
     return res.status(500).json({
         error: {
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'An unexpected error occurred.'
+            message: 'An unexpected error occurred. Please try again.'
         },
     });
 

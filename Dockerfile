@@ -5,7 +5,8 @@ RUN npm ci
 COPY apps/web/ ./
 RUN npm run build
 FROM node:24-bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY apps/api/package*.json ./apps/api/
 RUN cd apps/api && npm ci --omit=dev

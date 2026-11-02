@@ -28,7 +28,21 @@ For Docker: set POSTGRES_PASSWORD, LINE_LOGIN_CHANNEL_ID and LIFF_ID in .env, th
 docker compose up --build
 ```
 Use a URL-safe local development password in Compose. App and DB use a private container network; local published ports bind to loopback.
-The container includes Thai and English Tesseract binaries, but no OCR feature is enabled yet.
+The container includes Tesseract with Thai/English data and Poppler. OCR accepts screenshots and PDFs up to eight pages, with a 5 MiB file limit. On Windows without Docker, install native Tesseract and Poppler separately, add Poppler to PATH, and set TESSERACT_COMMAND to the Tesseract executable. Missing tools return an unavailable response; manual entry remains usable. LINE chat returns extracted rows for review and manual entry in LIFF.
+
+Optional Gemini configuration uses GEMINI_API_KEY and GEMINI_MODEL together. Leave both empty for complete local Thai templates. Keep server credentials out of Vite variables. An explicitly configured model must support Generate Content JSON responses; errors and a five-second timeout fall back locally. External processing also requires the student's separate consent.
+
+## Deadline notifications
+
+The hourly workflow runs at minute 17 UTC. Create a GitHub environment named `notifications`, restrict access to the release/default branch, and supply DATABASE_URL, LINE_CHANNEL_ACCESS_TOKEN, LIFF_ID and STORAGE_POLICY_VERSION as protected secrets. Use the deployed database after migration 006. The runner never applies migrations. Enable scheduled operation only after a real test-account push and configuration review. GitHub schedules can be delayed or skipped; this is not an exact-time delivery guarantee.
+
+For one controlled run:
+
+```powershell
+node --env-file=.env scripts/run-deadline-alerts.cjs
+```
+
+This command sends real pushes to eligible consented accounts when real credentials are configured. It retries transient failures using the persisted LINE key, prints only counts/times, and returns a failure exit code on permanent/exhausted delivery errors. Keep test runs limited to the agreed accounts and fictional data.
 
 ## Verification
 
@@ -48,7 +62,7 @@ There is no environment setting to bypass authentication.
 
 ## Free Render deployment
 
-render.yaml defines an app and PostgreSQL in Singapore. Import the repository as a Blueprint and supply LINE_LOGIN_CHANNEL_ID and LIFF_ID. Confirm both plans are free before creation. No paid upgrade is authorised.
+render.yaml defines an app and PostgreSQL in Singapore. Import the repository as a Blueprint and supply LINE_LOGIN_CHANNEL_ID, LIFF_ID, LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN. Confirm both plans are free before creation. No paid upgrade is authorised.
 
 The Docker startup runs migrations because a separate pre-deploy step may be unavailable on a free service.
 The app must pass /ready. Set the LIFF endpoint to the public HTTPS root after deployment.
@@ -61,7 +75,7 @@ A successful local build is not a deployed service. Record the URL and executed 
 Free services sleep when idle. Free PostgreSQL expires after 30 days. Record creation and expiry dates and export before expiry, then decide continuity before the provisional final deadline.
 Use pg_dump/pg_restore with a secure environment or database client. Restore to a separate empty database and verify counts before relying on a backup.
 
-Provider reference: https://render.com/docs/free (checked 24 September 2026).
+Provider reference: https://render.com/docs/free (rechecked 27 September 2026).
 
 ## LINE setup
 
@@ -69,7 +83,7 @@ Provider reference: https://render.com/docs/free (checked 24 September 2026).
 2. Create LINE Login under the same provider, enable web app and add both test accounts as testers while the channel is in development.
 3. Add a LIFF app with openid scope and the public HTTPS endpoint. Record the LIFF ID and Login channel ID in server configuration.
 4. Open LIFF from each test account. Check that login alone creates no student record, grant creates one, and confirmed deletion removes it.
-5. Chat identity parity, webhook signature validation and Rich Menu are the 27 September integration stage. Do not claim them from this consent screen.
+5. Follow [LINE chat and release setup](../line/release-setup.md) for webhook registration, Rich Menu and real identity-parity checks. Local chat tests do not prove real LINE delivery.
 
 Server identity verification: https://developers.line.biz/en/reference/line-login/#verify-id-token
 LIFF user data: https://developers.line.biz/en/docs/liff/using-user-profile/
@@ -85,4 +99,17 @@ After the first workflow run exists, configure protection for main:
 - Block force pushes and deletion. Apply the rule to administrators if available.
 - Demonstrate a deliberately failing PR is blocked and a reviewed green PR can merge.
 
-Writing workflow YAML does not configure repository protection. Record remote evidence after authorised GitHub account access is available.
+Writing workflow YAML does not configure repository protection. On 30 October 2026 the branch API reported main unprotected, no required status checks, and no repository rulesets. No settings were changed. Record administrative acceptance after configuration.
+
+## Local demo recording
+
+The opt-in `@demo` browser case uses fictional data and controlled LINE identity, not real provider or participant acceptance. It covers manual setup, marks, target calculation, GPAX comparison, local Thai explanation and confirmed deletion.
+
+```powershell
+$env:RECORD_DEMO='1'
+$env:BROWSER_CHANNEL='msedge'
+npm.cmd --prefix apps/web run test:browser -- --project=desktop --grep '@demo' --workers=1
+Remove-Item Env:RECORD_DEMO
+```
+
+Requires the same disposable `TEST_DATABASE_URL` as other browser tests. Recordings go to ignored browser test results. The reviewed submission candidate is linked from `docs/submission/README.md`. Its 68-second duration includes slower playback for readable captions.

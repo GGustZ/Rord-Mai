@@ -1,5 +1,9 @@
 # Rord Mai
 
+The 30 October candidate adds separate consent endpoints and onboarding choices, explicit weight-gap messages, a Recharts comparison with engine-produced delta, withdrawal considerations and Thai UI copy. See [architecture](docs/architecture.md), [data inventory](docs/privacy-data-inventory.md), [release evidence](docs/testing/release-2026-10-30.md), [UAT protocol](docs/testing/uat-protocol.md) and [final-report candidate](docs/final-report.md). Participant UAT and same-release public acceptance remain pending.
+
+The implementation includes cumulative profiles, ordinary GPAX scenarios, repeat metadata, independent explanation consent, Thai templates, optional verified-number Gemini wording, LINE quick replies, deadline notifications and syllabus drafts from screenshots or PDFs. Repeated-course GPAX is blocked until the official rule is verified. See [setup](docs/development/setup.md) and the [current contract](docs/api/contract.md). Local implementation does not establish live LINE/Gemini delivery or remote review gates.
+
 ## Project documentation
 
 Read the [folder rationale and file-by-file guide](docs/project-guide.md) first, then the [test-case catalogue and execution guide](docs/testing/test-cases.md).
@@ -19,7 +23,7 @@ From the repository root, `npm run check` runs ESLint, API and engine tests, and
 5. apps/api/src/lib/validate-create-section.js checks plain input without network or database access.
 6. apps/api/tests contains regression tests for these behaviors.
 
-GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent, section create/join/read, creator weight revisions, own enrolments, scores/attendance, targets, persisted calculations and confirmed deletion work with PostgreSQL. React connects these flows. LINE chat and Rich Menu integration remain pending.
+GET /health checks HTTP and GET /ready checks PostgreSQL. Protected routes verify LIFF ID tokens. Consent, section create/join/read, creator weight revisions, own enrolments, scores/attendance, targets, persisted calculations and confirmed deletion work with PostgreSQL. React connects these flows. Signed LINE chat now uses the same protected academic service. Rich Menu assets and registration are ready; real LINE registration, identity parity and delivery still require verification. See [release setup](docs/line/release-setup.md).
 
 The current API-01 specification is docs/api/contract.md. Team review is outstanding. The earlier learning notes in docs/api/README.md are historical and are superseded where they differ from the contract.
 
@@ -53,3 +57,5 @@ npm run check:consent:race
 ```
 
 These checks create temporary records and clean up their own data. They run separately from `npm test`. The race check covers withdrawal-first ordering, not a complete withdrawal endpoint or data-deletion workflow.
+
+Public calculation API documentation and an external-browser example are served at /api-docs. Save that page locally and set its API origin to call the service from outside the LINE app.

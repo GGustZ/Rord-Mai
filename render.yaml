@@ -14,8 +14,16 @@ services:
         sync: false
       - key: LIFF_ID
         sync: false
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
       - key: STORAGE_POLICY_VERSION
         value: 2026-09-demo-v1
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
 databases:
   - name: rord-mai-progress-db
     plan: free

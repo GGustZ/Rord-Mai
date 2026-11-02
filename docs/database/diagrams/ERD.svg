@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1980" height="2580" viewBox="0 0 1980 2580">
+<rect width="1980" height="2580" fill="white"/>
+<text x="60" y="52" font-family="Arial" font-size="28">Rord-Mai physical schema, migrations 001–006</text>
+<rect x="60.0" y="1240.0" width="560.0" height="189.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="76.0" y="1270.0" font-family="Arial" font-size="17" font-weight="bold">academic_profiles</text>
+<text x="76.0" y="1295.0" font-family="Arial" font-size="17" font-weight="normal">PK student_id: uuid</text>
+<text x="76.0" y="1320.0" font-family="Arial" font-size="17" font-weight="normal">current_gpa: numeric</text>
+<text x="76.0" y="1345.0" font-family="Arial" font-size="17" font-weight="normal">credits_counted: int4</text>
+<text x="76.0" y="1370.0" font-family="Arial" font-size="17" font-weight="normal">academic_year: int4</text>
+<text x="76.0" y="1395.0" font-family="Arial" font-size="17" font-weight="normal">semester: int4</text>
+<rect x="1340.0" y="850.0" width="560.0" height="214.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="1356.0" y="880.0" font-family="Arial" font-size="17" font-weight="bold">attendance</text>
+<text x="1356.0" y="905.0" font-family="Arial" font-size="17" font-weight="normal">PK enrollment_id: uuid</text>
+<text x="1356.0" y="930.0" font-family="Arial" font-size="17" font-weight="normal">PK component_id: uuid</text>
+<text x="1356.0" y="955.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="1356.0" y="980.0" font-family="Arial" font-size="17" font-weight="normal">attended: int4</text>
+<text x="1356.0" y="1005.0" font-family="Arial" font-size="17" font-weight="normal">total_sessions: int4</text>
+<text x="1356.0" y="1030.0" font-family="Arial" font-size="17" font-weight="normal">updated_at: timestamptz</text>
+<rect x="1340.0" y="100.0" width="560.0" height="239.0" fill="#E4F1E8" stroke="#547569"/>
+<text x="1356.0" y="130.0" font-family="Arial" font-size="17" font-weight="bold">components</text>
+<text x="1356.0" y="155.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="1356.0" y="180.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="1356.0" y="205.0" font-family="Arial" font-size="17" font-weight="normal">name: varchar</text>
+<text x="1356.0" y="230.0" font-family="Arial" font-size="17" font-weight="normal">weight_percent: numeric</text>
+<text x="1356.0" y="255.0" font-family="Arial" font-size="17" font-weight="normal">maximum_score: numeric</text>
+<text x="1356.0" y="280.0" font-family="Arial" font-size="17" font-weight="normal">position: int4</text>
+<text x="1356.0" y="305.0" font-family="Arial" font-size="17" font-weight="normal">input_type: text ?</text>
+<rect x="700.0" y="1240.0" width="560.0" height="139.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="716.0" y="1270.0" font-family="Arial" font-size="17" font-weight="bold">conversation_state</text>
+<text x="716.0" y="1295.0" font-family="Arial" font-size="17" font-weight="normal">PK student_id: uuid</text>
+<text x="716.0" y="1320.0" font-family="Arial" font-size="17" font-weight="normal">state: jsonb</text>
+<text x="716.0" y="1345.0" font-family="Arial" font-size="17" font-weight="normal">expires_at: timestamptz</text>
+<rect x="60.0" y="1680.0" width="560.0" height="289.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="76.0" y="1710.0" font-family="Arial" font-size="17" font-weight="bold">deadline_notifications</text>
+<text x="76.0" y="1735.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="76.0" y="1760.0" font-family="Arial" font-size="17" font-weight="normal">student_id: uuid</text>
+<text x="76.0" y="1785.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="76.0" y="1810.0" font-family="Arial" font-size="17" font-weight="normal">retry_key: uuid</text>
+<text x="76.0" y="1835.0" font-family="Arial" font-size="17" font-weight="normal">message: text</text>
+<text x="76.0" y="1860.0" font-family="Arial" font-size="17" font-weight="normal">attempts: int4</text>
+<text x="76.0" y="1885.0" font-family="Arial" font-size="17" font-weight="normal">status: text</text>
+<text x="76.0" y="1910.0" font-family="Arial" font-size="17" font-weight="normal">next_attempt_at: timestamptz</text>
+<text x="76.0" y="1935.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<rect x="60.0" y="850.0" width="560.0" height="214.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="76.0" y="880.0" font-family="Arial" font-size="17" font-weight="bold">enrollments</text>
+<text x="76.0" y="905.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="76.0" y="930.0" font-family="Arial" font-size="17" font-weight="normal">student_id: uuid</text>
+<text x="76.0" y="955.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="76.0" y="980.0" font-family="Arial" font-size="17" font-weight="normal">target_grade: text ?</text>
+<text x="76.0" y="1005.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<text x="76.0" y="1030.0" font-family="Arial" font-size="17" font-weight="normal">previous_grade_point: numeric ?</text>
+<rect x="700.0" y="1680.0" width="560.0" height="239.0" fill="#E4F1E8" stroke="#547569"/>
+<text x="716.0" y="1710.0" font-family="Arial" font-size="17" font-weight="bold">grading_revisions</text>
+<text x="716.0" y="1735.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="716.0" y="1760.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="716.0" y="1785.0" font-family="Arial" font-size="17" font-weight="normal">revision: int4</text>
+<text x="716.0" y="1810.0" font-family="Arial" font-size="17" font-weight="normal">actor_id: uuid ?</text>
+<text x="716.0" y="1835.0" font-family="Arial" font-size="17" font-weight="normal">previous_weights: jsonb</text>
+<text x="716.0" y="1860.0" font-family="Arial" font-size="17" font-weight="normal">new_weights: jsonb</text>
+<text x="716.0" y="1885.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<rect x="1340.0" y="1240.0" width="560.0" height="239.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="1356.0" y="1270.0" font-family="Arial" font-size="17" font-weight="bold">private_jobs</text>
+<text x="1356.0" y="1295.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="1356.0" y="1320.0" font-family="Arial" font-size="17" font-weight="normal">student_id: uuid</text>
+<text x="1356.0" y="1345.0" font-family="Arial" font-size="17" font-weight="normal">event_id: text</text>
+<text x="1356.0" y="1370.0" font-family="Arial" font-size="17" font-weight="normal">kind: text</text>
+<text x="1356.0" y="1395.0" font-family="Arial" font-size="17" font-weight="normal">payload: jsonb</text>
+<text x="1356.0" y="1420.0" font-family="Arial" font-size="17" font-weight="normal">expires_at: timestamptz</text>
+<text x="1356.0" y="1445.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<rect x="1340.0" y="1680.0" width="560.0" height="139.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="1356.0" y="1710.0" font-family="Arial" font-size="17" font-weight="bold">schema_migrations</text>
+<text x="1356.0" y="1735.0" font-family="Arial" font-size="17" font-weight="normal">PK name: text</text>
+<text x="1356.0" y="1760.0" font-family="Arial" font-size="17" font-weight="normal">checksum: text</text>
+<text x="1356.0" y="1785.0" font-family="Arial" font-size="17" font-weight="normal">applied_at: timestamptz</text>
+<rect x="700.0" y="850.0" width="560.0" height="214.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="716.0" y="880.0" font-family="Arial" font-size="17" font-weight="bold">scores</text>
+<text x="716.0" y="905.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="716.0" y="930.0" font-family="Arial" font-size="17" font-weight="normal">enrollment_id: uuid</text>
+<text x="716.0" y="955.0" font-family="Arial" font-size="17" font-weight="normal">component_id: uuid</text>
+<text x="716.0" y="980.0" font-family="Arial" font-size="17" font-weight="normal">section_id: uuid</text>
+<text x="716.0" y="1005.0" font-family="Arial" font-size="17" font-weight="normal">score: numeric</text>
+<text x="716.0" y="1030.0" font-family="Arial" font-size="17" font-weight="normal">updated_at: timestamptz</text>
+<rect x="700.0" y="100.0" width="560.0" height="589.0" fill="#E4F1E8" stroke="#547569"/>
+<text x="716.0" y="130.0" font-family="Arial" font-size="17" font-weight="bold">sections</text>
+<text x="716.0" y="155.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="716.0" y="180.0" font-family="Arial" font-size="17" font-weight="normal">join_code: varchar</text>
+<text x="716.0" y="205.0" font-family="Arial" font-size="17" font-weight="normal">course_code: varchar</text>
+<text x="716.0" y="230.0" font-family="Arial" font-size="17" font-weight="normal">course_name: varchar</text>
+<text x="716.0" y="255.0" font-family="Arial" font-size="17" font-weight="normal">section_number: varchar</text>
+<text x="716.0" y="280.0" font-family="Arial" font-size="17" font-weight="normal">academic_year: int4</text>
+<text x="716.0" y="305.0" font-family="Arial" font-size="17" font-weight="normal">semester: int4</text>
+<text x="716.0" y="330.0" font-family="Arial" font-size="17" font-weight="normal">credits: int4</text>
+<text x="716.0" y="355.0" font-family="Arial" font-size="17" font-weight="normal">grading_mode: text</text>
+<text x="716.0" y="380.0" font-family="Arial" font-size="17" font-weight="normal">withdrawal_deadline: date</text>
+<text x="716.0" y="405.0" font-family="Arial" font-size="17" font-weight="normal">a_min: numeric ?</text>
+<text x="716.0" y="430.0" font-family="Arial" font-size="17" font-weight="normal">b_plus_min: numeric ?</text>
+<text x="716.0" y="455.0" font-family="Arial" font-size="17" font-weight="normal">b_min: numeric ?</text>
+<text x="716.0" y="480.0" font-family="Arial" font-size="17" font-weight="normal">c_plus_min: numeric ?</text>
+<text x="716.0" y="505.0" font-family="Arial" font-size="17" font-weight="normal">c_min: numeric ?</text>
+<text x="716.0" y="530.0" font-family="Arial" font-size="17" font-weight="normal">d_plus_min: numeric ?</text>
+<text x="716.0" y="555.0" font-family="Arial" font-size="17" font-weight="normal">d_min: numeric ?</text>
+<text x="716.0" y="580.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<text x="716.0" y="605.0" font-family="Arial" font-size="17" font-weight="normal">updated_at: timestamptz</text>
+<text x="716.0" y="630.0" font-family="Arial" font-size="17" font-weight="normal">creator_id: uuid ?</text>
+<text x="716.0" y="655.0" font-family="Arial" font-size="17" font-weight="normal">structure_revision: int4</text>
+<rect x="60.0" y="100.0" width="560.0" height="289.0" fill="#EEF3F7" stroke="#547569"/>
+<text x="76.0" y="130.0" font-family="Arial" font-size="17" font-weight="bold">students</text>
+<text x="76.0" y="155.0" font-family="Arial" font-size="17" font-weight="normal">PK id: uuid</text>
+<text x="76.0" y="180.0" font-family="Arial" font-size="17" font-weight="normal">line_user_id: text</text>
+<text x="76.0" y="205.0" font-family="Arial" font-size="17" font-weight="normal">created_at: timestamptz</text>
+<text x="76.0" y="230.0" font-family="Arial" font-size="17" font-weight="normal">updated_at: timestamptz</text>
+<text x="76.0" y="255.0" font-family="Arial" font-size="17" font-weight="normal">storage_consent: bool</text>
+<text x="76.0" y="280.0" font-family="Arial" font-size="17" font-weight="normal">storage_policy_version: text ?</text>
+<text x="76.0" y="305.0" font-family="Arial" font-size="17" font-weight="normal">storage_consented_at: timestamptz ?</text>
+<text x="76.0" y="330.0" font-family="Arial" font-size="17" font-weight="normal">cross_border_explanation: bool</text>
+<text x="76.0" y="355.0" font-family="Arial" font-size="17" font-weight="normal">explanation_consented_at: timestamptz ?</text>
+<text x="60" y="2130" font-family="Arial" font-size="22">Foreign keys (editable graph connections are in ERD.drawio)</text>
+<text x="60" y="2170" font-family="Arial" font-size="14">academic_profiles → students: FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE</text>
+<text x="60" y="2195" font-family="Arial" font-size="14">attendance → enrollments: FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE</text>
+<text x="60" y="2220" font-family="Arial" font-size="14">attendance → components: FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT</text>
+<text x="60" y="2245" font-family="Arial" font-size="14">components → sections: FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE</text>
+<text x="60" y="2270" font-family="Arial" font-size="14">conversation_state → students: FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE</text>
+<text x="60" y="2295" font-family="Arial" font-size="14">enrollments → students: FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE</text>
+<text x="60" y="2320" font-family="Arial" font-size="14">enrollments → sections: FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE RESTRICT</text>
+<text x="60" y="2345" font-family="Arial" font-size="14">grading_revisions → students: FOREIGN KEY (actor_id) REFERENCES students(id) ON DELETE SET NULL</text>
+<text x="60" y="2370" font-family="Arial" font-size="14">grading_revisions → sections: FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE</text>
+<text x="60" y="2395" font-family="Arial" font-size="14">private_jobs → students: FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE</text>
+<text x="60" y="2420" font-family="Arial" font-size="14">scores → components: FOREIGN KEY (component_id, section_id) REFERENCES components(id, section_id) ON DELETE RESTRICT</text>
+<text x="60" y="2445" font-family="Arial" font-size="14">scores → enrollments: FOREIGN KEY (enrollment_id, section_id) REFERENCES enrollments(id, section_id) ON DELETE CASCADE</text>
+<text x="60" y="2470" font-family="Arial" font-size="14">sections → students: FOREIGN KEY (creator_id) REFERENCES students(id) ON DELETE SET NULL</text>
+<text x="60" y="2495" font-family="Arial" font-size="14">deadline_notifications → students: FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE</text>
+<text x="60" y="2520" font-family="Arial" font-size="14">deadline_notifications → sections: FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE</text>
+</svg>

@@ -148,12 +148,14 @@ Content-Type: application/json
     {
       "name": "Coursework",
       "weightPercent": 60,
-      "maximumScore": 120
+      "maximumScore": 120,
+      "inputType": "marks"
     },
     {
       "name": "Final examination",
       "weightPercent": 40,
-      "maximumScore": 80
+      "maximumScore": 80,
+      "inputType": "marks"
     }
   ]
 }
@@ -182,6 +184,7 @@ are proposed constraints for the pilot and require team review.
 - weightPercent: greater than 0 and at most 100.
 - weightPercent: at most two decimal places.
 - maximumScore: a finite number greater than 0.
+- inputType: required, either "marks" or "attendance". Names do not determine the type.
 - Unknown fields are rejected.
 - Component weights must total exactly 100 percent.
 

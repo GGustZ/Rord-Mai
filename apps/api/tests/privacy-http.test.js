@@ -5,7 +5,7 @@ let service, app;
 beforeEach(() => {
   service = {
     getConsent: jest.fn().mockResolvedValue({ storage: false, crossBorderExplanation: false, policyVersion: 'v1', updatedAt: null }),
-    grantStorageConsent: jest.fn(), deleteData: jest.fn(),
+    grantStorageConsent: jest.fn(), setExplanationConsent: jest.fn(), deleteData: jest.fn(),
     withStorageConsent: jest.fn().mockRejectedValue(Object.assign(Error(), { code: 'STORAGE_CONSENT_REQUIRED', status: 403 })),
   };
   app = createApp({ consentService: service, verifyIdentity: async (token) => {
@@ -27,7 +27,30 @@ test('consent read requires verified identity', async () => {
 test('grant passes only verified identity to service', async () => {
   const response = await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: false, policyVersion: 'v1' });
   expect(response.status).toBe(200);
-  expect(service.grantStorageConsent).toHaveBeenCalledWith({ identity: { lineUserId: 'trusted' }, accepted: true, policyVersion: 'v1' });
+  expect(service.grantStorageConsent).toHaveBeenCalledWith({ identity: { lineUserId: 'trusted' }, accepted: true, policyVersion: 'v1',crossBorderExplanation:false });
+});
+test('separate consent endpoints pass only their own choice',async()=>{
+  expect((await auth(request(app).put('/api/v1/consents/storage')).send({storage:true,policyVersion:'v1'})).status).toBe(200);
+  expect(service.grantStorageConsent).toHaveBeenCalledWith({identity:{lineUserId:'trusted'},accepted:true,policyVersion:'v1'});
+  expect((await auth(request(app).put('/api/v1/consents/cross-border-explanation')).send({crossBorderExplanation:true,policyVersion:'v1'})).status).toBe(200);
+  expect(service.setExplanationConsent).toHaveBeenCalledWith({identity:{lineUserId:'trusted'},accepted:true,policyVersion:'v1'});
+});
+test.each([
+  ['/consents/storage',{storage:true,crossBorderExplanation:true,policyVersion:'v1'}],
+  ['/consents/storage',{storage:'true',policyVersion:'v1'}],
+  ['/consents/cross-border-explanation',{storage:true,crossBorderExplanation:true,policyVersion:'v1'}],
+  ['/consents/cross-border-explanation',{crossBorderExplanation:1,policyVersion:'v1'}],
+  ['/consents/cross-border-explanation',null],
+])('separate consent boundary rejects %s %j',async(path,body)=>{
+  expect((await auth(request(app).put('/api/v1'+path)).type('json').send(JSON.stringify(body))).status).toBe(400);
+  expect(service.grantStorageConsent).not.toHaveBeenCalled();expect(service.setExplanationConsent).not.toHaveBeenCalled();
+});
+test('separate storage withdrawal requires confirmation and deletes private data',async()=>{
+  const body={storage:false,policyVersion:'v1'};
+  expect((await auth(request(app).put('/api/v1/consents/storage')).send(body)).status).toBe(400);
+  expect(service.deleteData).not.toHaveBeenCalled();
+  expect((await auth(request(app).put('/api/v1/consents/storage')).send({...body,confirmDeletion:true})).status).toBe(200);
+  expect(service.deleteData).toHaveBeenCalledTimes(1);
 });
 test.each([
   { storage: 'true', crossBorderExplanation: false, policyVersion: 'v1' },
@@ -38,8 +61,10 @@ test.each([
   expect(response.status).toBe(400);
   expect(service.grantStorageConsent).not.toHaveBeenCalled();
 });
-test('external explanation feature remains disabled', async () => {
-  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: true, policyVersion: 'v1' })).status).toBe(409);
+test('external explanation consent is independent and requires storage', async () => {
+  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: true, crossBorderExplanation: true, policyVersion: 'v1' })).status).toBe(200);
+  expect(service.grantStorageConsent).toHaveBeenCalledWith(expect.objectContaining({crossBorderExplanation:true}));
+  expect((await auth(request(app).put('/api/v1/consents')).send({ storage: false, crossBorderExplanation: true, policyVersion: 'v1',confirmDeletion:true })).status).toBe(400);
 });
 test('withdrawal requires confirmation and then invokes deletion', async () => {
   const body = { storage: false, crossBorderExplanation: false, policyVersion: 'v1' };

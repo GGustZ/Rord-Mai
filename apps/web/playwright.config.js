@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   use: { baseURL: 'http://127.0.0.1:4173', headless: true,
+    video: process.env.RECORD_DEMO === '1' ? 'on' : 'off',
     ...(process.env.BROWSER_CHANNEL ? { channel: process.env.BROWSER_CHANNEL } : {}) },
   globalSetup: './tests/global-setup.js',
   projects: [

@@ -1,0 +1,29 @@
+name: Deadline alerts
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deadline-alerts
+  cancel-in-progress: false
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: notifications
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci --prefix apps/api
+      - run: node scripts/run-deadline-alerts.cjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LIFF_ID: ${{ secrets.LIFF_ID }}
+          STORAGE_POLICY_VERSION: ${{ secrets.STORAGE_POLICY_VERSION }}

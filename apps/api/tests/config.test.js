@@ -8,4 +8,11 @@ test('only validated public and server settings are returned', () => {
   expect(() => readConfig({ ...env, PORT: '0' })).toThrow();
   expect(() => readConfig({ ...env, DATABASE_URL: 'https://example.com' })).toThrow();
 });
+test('chat credentials must be supplied together and stay server-side', () => {
+  expect(readConfig(env).messaging).toBeNull();
+  expect(() => readConfig({ ...env, LINE_CHANNEL_SECRET: 'secret' })).toThrow('both');
+  expect(() => readConfig({ ...env, LINE_CHANNEL_ACCESS_TOKEN: 'token' })).toThrow('both');
+  expect(readConfig({ ...env, LINE_CHANNEL_SECRET: 'secret', LINE_CHANNEL_ACCESS_TOKEN: 'token' }).messaging)
+    .toEqual({ channelSecret: 'secret', accessToken: 'token' });
+});
 
