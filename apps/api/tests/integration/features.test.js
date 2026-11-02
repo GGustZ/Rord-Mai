@@ -136,7 +136,7 @@ test('withdrawal waits for a bounded outbound explanation and removes all new pr
   expect((await pool.query('SELECT count(*) FROM academic_profiles')).rows[0].count).toBe('0');
   expect((await academic.detail({identity:b,enrollmentId:joined.id})).section.canEdit).toBe(false);
 });
-test('multipart OCR rejects PDFs and consentless uploads; a draft writes no academic records',async()=>{
+test('multipart OCR rejects invalid files and consentless uploads; a draft writes no academic records',async()=>{
   const ocrService=createOcrService({recognizeImage:async()=> 'Midterm 40%\nFinal 60%'});
   const app=createApp({pool,consentService:consent,ocrService,verifyIdentity:async token=>token==='a'?a:{lineUserId:'no-consent'}});
   const post=token=>request(app).post('/api/v1/ocr/syllabus').set('Authorization','Bearer '+token);
@@ -146,6 +146,17 @@ test('multipart OCR rejects PDFs and consentless uploads; a draft writes no acad
   const before=(await pool.query('SELECT count(*) FROM sections')).rows[0].count;
   const response=await post('a').attach('image',png,'syllabus.png');expect(response.status).toBe(200);expect(response.body.data.requiresConfirmation).toBe(true);
   expect((await pool.query('SELECT count(*) FROM sections')).rows[0].count).toBe(before);
+});
+test('a second OCR upload is rejected while another upload is being processed',async()=>{
+  let finish,notify;
+  const started=new Promise(resolve=>{notify=resolve;});
+  const ocrService={extract:()=>{notify();return new Promise(resolve=>{finish=resolve;});}};
+  const app=createApp({pool,consentService:consent,ocrService,verifyIdentity:async()=>a});
+  const png=await sharp({create:{width:10,height:10,channels:3,background:'white'}}).png().toBuffer();
+  const post=()=>request(app).post('/api/v1/ocr/syllabus').set('Authorization','Bearer a').attach('image',png,'syllabus.png');
+  const first=post().then(response=>response);await started;
+  try{expect((await post()).status).toBe(503);}finally{finish({components:[],warnings:[],requiresConfirmation:true});}
+  expect((await first).status).toBe(200);
 });
 test('forward/down/reapply migration preserves the cumulative profile on an existing schema',async()=>{
   const client=await pool.connect();

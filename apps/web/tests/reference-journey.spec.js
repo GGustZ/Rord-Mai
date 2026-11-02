@@ -65,9 +65,9 @@ test('all reference screens use real data, optional onboarding, join confirmatio
   await page.getByLabel('6-character Join Code').fill(created.section.joinCode);await page.getByRole('button',{name:'Join Section',exact:true}).click();
   await expect(page.getByRole('button',{name:'View Course',exact:true})).toBeVisible();await capture(page,info,'ref-08-enrolled');
   await startCreate(page);await capture(page,info,'ref-09-course-info');await page.getByRole('button',{name:'Continue',exact:true}).click();await capture(page,info,'ref-10-structure');
-  await page.getByRole('button',{name:'Upload Syllabus Image',exact:true}).click();await capture(page,info,'ref-12-upload');
+  await page.getByRole('button',{name:'Upload Syllabus',exact:true}).click();await capture(page,info,'ref-12-upload');
   const image=await sharp({create:{width:20,height:20,channels:3,background:'white'}}).png().toBuffer();
-  await page.getByLabel('Syllabus Image',{exact:true}).setInputFiles({name:'syllabus.png',mimeType:'image/png',buffer:image});await expect(page.getByRole('heading',{name:'Check and Edit'})).toBeVisible();await capture(page,info,'ref-13-review');
+  await page.getByLabel('Syllabus File',{exact:true}).setInputFiles({name:'syllabus.png',mimeType:'image/png',buffer:image});await expect(page.getByRole('heading',{name:'Check and Edit'})).toBeVisible();await capture(page,info,'ref-13-review');
   const before=(await call(page,token,'/enrollments')).items.length;
   await page.getByRole('checkbox',{name:'I have checked all extracted values against the syllabus'}).check();await page.getByRole('button',{name:'Confirm & Continue'}).click();
   expect((await call(page,token,'/enrollments')).items).toHaveLength(before);

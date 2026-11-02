@@ -58,6 +58,10 @@ test('syllabus parsing uses Thai/English percentages, warns on gaps and never pr
   expect(parseSyllabus('Midterm 95%').warnings.join(' ')).toContain('100%');
   expect(()=>parseSyllabus('unreadable image')).toThrow();
 });
+test('syllabus parsing stops at the assessment total before unrelated percentages',()=>{
+  const result=parseSyllabus('Midterm 30%\nFinal 30%\nLabs 40%\nTOTAL 100%\nEach learning outcome requires 50%');
+  expect(result.components.map(c=>[c.name,c.weightPercent])).toEqual([['Midterm',30],['Final',30],['Labs',40]]);
+});
 test('OCR validates content, dimensions, decoded images and processing cleanup',async()=>{
   let temporary;
   const recognizeImage=jest.fn(async file=>{temporary=file;expect((await fs.stat(file)).size).toBeGreaterThan(0);return 'Midterm 40%\nFinal 60%';});

@@ -92,7 +92,7 @@ Repeated-course GPAX is intentionally unavailable pending confirmation of the ap
 
 Free hosting may sleep, affecting cold-start and scheduled timing. Durable database acceptance can delay webhook acknowledgement, so the literal subsecond claim requires live measurements. Real LINE login, quick replies, Rich Menu registration, phone receipt, scheduling, current hosting configuration, branch protection, clean-machine setup and team review remain evidence gates.
 
-OCR supports reviewed PNG/JPEG drafts, not PDF, and five real KKU syllabus photographs still require assessment. Gemini output uses trusted numeric placeholders and fallback but can still contain unsuitable language. Thai copy needs review by a person who did not write the screens. No generalisation or user-satisfaction claim is supported until UAT occurs.
+The local OCR candidate supports reviewed PNG/JPEG and PDF drafts; results can require substantial correction, especially for multi-column grading schemes. Actual LINE attachment delivery remains unverified. Gemini output uses trusted numeric placeholders and fallback but can still contain unsuitable language. Thai copy needs review by a person who did not write the screens. No generalisation or user-satisfaction claim is supported until UAT occurs.
 
 ## Conclusion
 

@@ -16,6 +16,20 @@ const quickReplies = text => {
     .map(action=>({type:'action',action:{type:'message',...action}}))};
 };
 const createLineMessaging = ({ accessToken, fetchImpl = fetch }) => ({
+  getContent: async (messageId, maxBytes) => {
+    if(typeof messageId!=='string'||!/^\d{1,32}$/.test(messageId))throw new Error('Invalid message ID.');
+    const response=await fetchImpl('https://api-data.line.me/v2/bot/message/'+messageId+'/content',{
+      headers:{Authorization:'Bearer '+accessToken},signal:AbortSignal.timeout(10000),redirect:'error',
+    });
+    if(!response.ok||!response.body)throw new Error('LINE content unavailable.');
+    const reader=response.body.getReader(),chunks=[];let size=0;
+    try{
+      for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;
+        if(size>maxBytes){await reader.cancel();throw Object.assign(new Error('File too large.'),{code:'IMAGE_TOO_LARGE'});}
+        chunks.push(Buffer.from(value));}
+    }finally{reader.releaseLock();}
+    return Buffer.concat(chunks);
+  },
   push: async (userId,text,retryKey) => {
     let response;
     try {

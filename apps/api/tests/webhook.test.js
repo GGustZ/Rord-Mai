@@ -77,3 +77,12 @@ test('native quick replies route numbered selections and confirmation through th
   expect(quickReplies('Choose a course:\n1. TEST Fictional course\n2. MATH Fictional math\nSend next for more.').items.map(item=>item.action.text)).toEqual(['1','2','score','summary','cancel','next']);
   expect(quickReplies('Send confirm to save, edit to change, or cancel.').items.map(item=>item.action.text)).toContain('confirm');
 });
+test('LINE attachment retrieval validates IDs and limits streamed content',async()=>{
+  const fetchImpl=jest.fn(async()=>new Response(Uint8Array.from([1,2,3,4])));
+  const client=createLineMessaging({accessToken:'test',fetchImpl});
+  await expect(client.getContent('12345',4)).resolves.toEqual(Buffer.from([1,2,3,4]));
+  expect(fetchImpl.mock.calls[0][0]).toBe('https://api-data.line.me/v2/bot/message/12345/content');
+  await expect(client.getContent('12345',3)).rejects.toMatchObject({code:'IMAGE_TOO_LARGE'});
+  await expect(client.getContent('../bad',4)).rejects.toThrow();
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+});

@@ -2,13 +2,14 @@
 const { createAcademicService } = require('./academic-service');
 const { listOwnedEnrollments, requireCurrentJob } = require('../repositories/academic-repository');
 const { messages } = require('../lib/errors');
+const { MAX_BYTES } = require('./ocr-service');
 const JOB_MS = 5 * 60 * 1000;
 const DRAFT_MS = 15 * 60 * 1000;
 const PAGE_SIZE = 8;
 
-const createChatService = ({ pool, consentService, messaging, liffId, now = Date.now }) => {
+const createChatService = ({ pool, consentService, messaging, liffId, ocrService, now = Date.now }) => {
   const appUrl = 'https://liff.line.me/' + liffId;
-  const help = 'Send score to enter marks, summary to view results, or cancel to discard a draft. Courses and consent: ' + appUrl;
+  const help = 'Send a syllabus screenshot or PDF to read its assessment weights. Send score to enter marks, summary to view results, or cancel to discard a draft. Courses and consent: ' + appUrl;
   const reply = async (token, text) => {
     try { await messaging.reply(token, text); return true; }
     catch { console.error('LINE reply failed; no push fallback.'); return false; }
@@ -16,23 +17,34 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
 
   const accept = async (event) => {
     // Academic conversations are private: never answer in group or room chats.
-    if (event?.source?.type !== 'user' || event.type !== 'message' || event.message?.type !== 'text') return;
+    if (event?.source?.type !== 'user' || event.type !== 'message' || !['text','image','file'].includes(event.message?.type)) return;
     if (typeof event.source.userId !== 'string' || !/^U[0-9a-f]{32}$/i.test(event.source.userId) ||
         typeof event.webhookEventId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(event.webhookEventId) ||
         typeof event.replyToken !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(event.replyToken) ||
-        typeof event.message.text !== 'string' || !Number.isSafeInteger(event.timestamp)) return;
+        !Number.isSafeInteger(event.timestamp)) return;
+    const type=event.message.type;
+    if(type==='text' && typeof event.message.text!=='string')return;
+    if(type!=='text' && (!ocrService||typeof event.message.id!=='string'||!/^\d{1,32}$/.test(event.message.id)))return;
+    if(type==='image'&&event.message.contentProvider?.type!=='line')return;
     if (event.timestamp <= now() - JOB_MS || event.timestamp > now() + 30000) return;
     const identity = { lineUserId: event.source.userId };
     try {
-      await consentService.withStorageConsent({ identity }, async ({ client, studentId }) => {
+      return await consentService.withStorageConsent({ identity }, async ({ client, studentId }) => {
         const student = (await client.query('SELECT storage_consented_at FROM students WHERE id=$1', [studentId])).rows[0];
         // Old redeliveries cannot become new work after withdrawal and a fresh grant.
         if (event.timestamp < new Date(student.storage_consented_at).getTime()) return;
-        const text = event.message.text.trim();
-        const payload = { text: text.length > 100 ? 'help' : text, timestamp: event.timestamp, replyToken: event.replyToken };
+        if(type!=='text'){
+          const duplicate=await client.query('SELECT 1 FROM private_jobs WHERE event_id=$1',[event.webhookEventId]);
+          if(duplicate.rows.length)return;
+          const pending=await client.query("SELECT 1 FROM private_jobs WHERE student_id=$1 AND kind='line.ocr' AND expires_at>CURRENT_TIMESTAMP LIMIT 1",[studentId]);
+          if(pending.rows.length)return () => reply(event.replyToken,'A syllabus is already being read. Please wait before sending another file.');
+        }
+        const text = type==='text'?event.message.text.trim():'';
+        const payload = type==='text'?{ text: text.length > 100 ? 'help' : text, timestamp: event.timestamp, replyToken: event.replyToken }:
+          {messageId:event.message.id,timestamp:event.timestamp,replyToken:event.replyToken};
         await client.query(`INSERT INTO private_jobs(student_id,event_id,kind,payload,expires_at)
-          VALUES ($1,$2,'line.pending',$3,$4) ON CONFLICT(event_id) DO NOTHING`,
-        [studentId, event.webhookEventId, JSON.stringify(payload), new Date(Math.min(event.timestamp, now()) + JOB_MS)]);
+          VALUES ($1,$2,$3,$4,$5) ON CONFLICT(event_id) DO NOTHING`,
+        [studentId, event.webhookEventId, type==='text'?'line.pending':'line.ocr',JSON.stringify(payload),new Date(Math.min(event.timestamp, now()) + JOB_MS)]);
       });
     } catch (error) {
       if (error.code !== 'STORAGE_CONSENT_REQUIRED') throw error;
@@ -178,7 +190,33 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
     }
   };
 
-  let running = null, timer, stopped = false;
+  const processAttachment=async candidate=>{
+    const identity={lineUserId:candidate.line_user_id};
+    try{
+      const payload=await consentService.withStorageConsent({identity},async({client,studentId})=>{
+        if(studentId!==candidate.student_id)return null;
+        const job=await requireCurrentJob(client,studentId,candidate.id);
+        return job.kind==='line.ocr'?job.payload:null;
+      });
+      if(!payload)return;
+      let response;
+      try{
+        const buffer=await messaging.getContent(payload.messageId,MAX_BYTES);
+        const draft=await ocrService.extract(buffer);
+        response='Syllabus draft (check and correct every item):\n'+draft.components.map(c=>`${c.name}: ${c.weightPercent}%`).join('\n')+
+          '\n\n'+draft.warnings.join('\n')+'\nEnter the checked structure in RordMai: '+appUrl;
+      }catch(error){response=(messages[error.code]?.[1]||'Could not read the file. Try a clearer screenshot or PDF.')+' Enter the structure manually: '+appUrl;}
+      await consentService.withStorageConsent({identity},async({client,studentId})=>{
+        if(studentId!==candidate.student_id)return;
+        const job=await requireCurrentJob(client,studentId,candidate.id);
+        if(job.kind!=='line.ocr'||job.payload.messageId!==payload.messageId)return;
+        await client.query("UPDATE private_jobs SET kind='line.reply',payload=$2 WHERE id=$1",[job.id,JSON.stringify({replyToken:payload.replyToken,response})]);
+      });
+      await processJob(candidate);
+    }catch(error){if(!['STORAGE_CONSENT_REQUIRED','RESOURCE_NOT_FOUND'].includes(error.code))throw error;}
+  };
+
+  let running = null, attachmentRunning=null, timer, stopped = false;
   const drain = async () => {
     if (running) return running;
     running = (async () => {
@@ -192,13 +230,20 @@ const createChatService = ({ pool, consentService, messaging, liffId, now = Date
       }
       await pool.query("DELETE FROM private_jobs WHERE kind LIKE 'line.%' AND expires_at <= CURRENT_TIMESTAMP");
       await pool.query('DELETE FROM conversation_state WHERE expires_at <= CURRENT_TIMESTAMP');
+      if(!attachmentRunning&&!stopped){
+        const candidate=(await pool.query(`SELECT j.id,j.student_id,s.line_user_id FROM private_jobs j
+          JOIN students s ON s.id=j.student_id WHERE j.kind='line.ocr' AND j.expires_at>CURRENT_TIMESTAMP ORDER BY j.created_at,j.id LIMIT 1`)).rows[0];
+        if(candidate){
+          attachmentRunning=processAttachment(candidate).catch(()=>console.error('Syllabus processing unavailable.')).finally(()=>{attachmentRunning=null;wake();});
+        }
+      }
     })();
     try { await running; } finally { running = null; }
   };
   const wake = () => { if (!stopped) drain().catch(() => console.error('Chat processing unavailable; pending work retained until expiry.')); };
   const start = () => { if (!timer) { stopped = false; timer = setInterval(wake, 1000); timer.unref(); wake(); } };
-  const stop = async () => { stopped = true; clearInterval(timer); timer = null; if (running) await running.catch(() => {}); };
-  return { accept, drain, wake, start, stop };
+  const stop = async () => { stopped = true; clearInterval(timer); timer = null; if (running) await running.catch(() => {});if(attachmentRunning)await attachmentRunning; };
+  return { accept, drain, wake, start, stop, waitForAttachments:async()=>{if(attachmentRunning)await attachmentRunning;} };
 };
 
 module.exports = { createChatService, JOB_MS, DRAFT_MS };

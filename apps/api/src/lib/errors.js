@@ -24,8 +24,9 @@ const messages = {
   OCR_UNAVAILABLE: [503, "Syllabus recognition is unavailable. Enter the structure manually."],
   OCR_BUSY: [503, "Another image is being processed. Please retry shortly."],
   EXTRACTION_FAILED: [422, "No usable assessment rows found. Try a clearer image or enter them manually."],
-  IMAGE_REQUIRED: [415, "Upload one PNG or JPEG image. PDF and other formats are not supported."],
-  IMAGE_TOO_LARGE: [413, "Use an image no larger than 5 MiB and 10 million pixels."],
+  IMAGE_REQUIRED: [415, "Upload one valid PDF, PNG or JPEG syllabus."],
+  IMAGE_TOO_LARGE: [413, "Use a file no larger than 5 MiB and an image no larger than 10 million pixels."],
+  PDF_TOO_MANY_PAGES: [413, "Use a PDF with at most 8 pages."],
 };
 const fail = (code) => {
   const [status, message] = messages[code];

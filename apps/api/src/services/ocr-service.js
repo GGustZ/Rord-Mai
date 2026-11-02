@@ -7,7 +7,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {fail}=require('../lib/errors');
 const execute=promisify(execFile);
-const MAX_BYTES=5*1024*1024,MAX_PIXELS=10000000;
+const MAX_BYTES=5*1024*1024,MAX_PIXELS=10000000,MAX_PDF_PAGES=8;
 const parseSyllabus=text=>{
   const components=[],warnings=['Check every assessment name, weight, maximum score and input type before confirming.'];
   const normalized=text.replace(/[๐-๙]/g,c=>String(c.charCodeAt(0)-'๐'.charCodeAt(0)));
@@ -17,7 +17,8 @@ const parseSyllabus=text=>{
     if(matches.length!==1){if(matches.length>1)warnings.push('Rows with multiple percentages were skipped. Check the image.');continue;}
     const match=matches[0],weightPercent=Number(match[1].replace(',','.'));
     const name=line.slice(0,match.index).replace(/^[\s|•\-\d.()]+/,'').replace(/[|:\s]+$/,'').trim();
-    if(!name||/^(?:total|รวม)/i.test(name)||weightPercent<=0||weightPercent>100)continue;
+    if(/^(?:total|รวม)(?:\s|$)/i.test(name)){if(components.length)break;continue;}
+    if(!name||weightPercent<=0||weightPercent>100)continue;
     if(name.length>100||components.some(c=>c.name===name)){warnings.push('พบชื่อรายการซ้ำหรือยาวexcessไป กรุณาแก้ไขด้วยตนเอง');continue;}
     components.push({name,weightPercent,maximumScore:100,inputType:'marks'});
     if(components.length>30)throw fail('EXTRACTION_FAILED');
@@ -41,11 +42,29 @@ const createOcrService=({executable='tesseract',recognizeImage=recognize}={})=>{
     // Verify a supported file signature before invoking any image decoder.
     const png=buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
     const jpeg=buffer[0]===255&&buffer[1]===216&&buffer[2]===255;
-    if(!png&&!jpeg)throw fail('IMAGE_REQUIRED');
+    const pdf=buffer.subarray(0,5).equals(Buffer.from('%PDF-'));
+    if(!png&&!jpeg&&!pdf)throw fail('IMAGE_REQUIRED');
     if(busy)throw fail('OCR_BUSY');
     busy=true;
     let directory;
     try{
+      directory=await fs.mkdtemp(path.join(os.tmpdir(),'rordmai-ocr-'));
+      if(pdf){
+        const source=path.join(directory,'syllabus.pdf'),prefix=path.join(directory,'page');
+        await fs.writeFile(source,buffer,{mode:0o600});
+        let info;
+        try{info=(await execute('pdfinfo',[source],{timeout:10000,maxBuffer:65536,windowsHide:true})).stdout;}
+        catch{throw fail('IMAGE_REQUIRED');}
+        const pages=Number(info.match(/^Pages:\s*(\d+)\s*$/m)?.[1]);
+        if(!Number.isInteger(pages)||pages<1||pages>MAX_PDF_PAGES)throw fail('PDF_TOO_MANY_PAGES');
+        try{await execute('pdftoppm',['-png','-scale-to','2400','-f','1','-l',String(pages),source,prefix],{timeout:30000,maxBuffer:65536,windowsHide:true});}
+        catch{throw fail('OCR_UNAVAILABLE');}
+        const files=(await fs.readdir(directory)).filter(name=>/^page-\d+\.png$/.test(name)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+        if(files.length!==pages)throw fail('OCR_UNAVAILABLE');
+        const text=[],deadline=Date.now()+60000;
+        for(const name of files){if(Date.now()>deadline)throw fail('OCR_UNAVAILABLE');try{text.push(await recognizeImage(path.join(directory,name),executable));}catch{throw fail('OCR_UNAVAILABLE');}}
+        return parseSyllabus(text.join('\n'));
+      }
       let metadata;
       try{metadata=await sharp(buffer,{limitInputPixels:false}).metadata();}catch{throw fail('IMAGE_REQUIRED');}
       if(!['png','jpeg'].includes(metadata.format)||(metadata.pages??1)!==1)throw fail('IMAGE_REQUIRED');
@@ -53,7 +72,6 @@ const createOcrService=({executable='tesseract',recognizeImage=recognize}={})=>{
       let image;
       try{image=await sharp(buffer,{limitInputPixels:MAX_PIXELS,failOn:'warning'}).rotate().grayscale().png().toBuffer();}
       catch{throw fail('IMAGE_REQUIRED');}
-      directory=await fs.mkdtemp(path.join(os.tmpdir(),'rordmai-ocr-'));
       const file=path.join(directory,'syllabus.png');
       await fs.writeFile(file,image,{mode:0o600});
       let text;

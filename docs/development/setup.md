@@ -28,7 +28,7 @@ For Docker: set POSTGRES_PASSWORD, LINE_LOGIN_CHANNEL_ID and LIFF_ID in .env, th
 docker compose up --build
 ```
 Use a URL-safe local development password in Compose. App and DB use a private container network; local published ports bind to loopback.
-The container now includes local Tesseract with Thai/English data. OCR accepts PNG/JPG only; PDF is deferred. On Windows without Docker, install native Tesseract separately and set TESSERACT_COMMAND to its executable path. Missing language data or executable returns a clear unavailable response; manual entry remains usable.
+The container includes Tesseract with Thai/English data and Poppler. OCR accepts screenshots and PDFs up to eight pages, with a 5 MiB file limit. On Windows without Docker, install native Tesseract and Poppler separately, add Poppler to PATH, and set TESSERACT_COMMAND to the Tesseract executable. Missing tools return an unavailable response; manual entry remains usable. LINE chat returns extracted rows for review and manual entry in LIFF.
 
 Optional Gemini configuration uses GEMINI_API_KEY and GEMINI_MODEL together. Leave both empty for complete local Thai templates. Keep server credentials out of Vite variables. An explicitly configured model must support Generate Content JSON responses; errors and a five-second timeout fall back locally. External processing also requires the student's separate consent.
 

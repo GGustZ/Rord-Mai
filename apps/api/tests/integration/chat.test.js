@@ -131,6 +131,38 @@ test('HOOK-005: groups and non-text events are ignored without private replies',
   await chat.drain(); expect(messaging.reply).not.toHaveBeenCalled();
   expect((await pool.query('SELECT * FROM private_jobs')).rows).toEqual([]);
 });
+test('syllabus attachments require consent and produce a review-only chat draft',async()=>{
+  const getContent=jest.fn().mockResolvedValue(Buffer.from('sample'));
+  const extract=jest.fn().mockResolvedValue({components:[{name:'Midterm',weightPercent:40},{name:'Final',weightPercent:60}],warnings:['Check values'],requiresConfirmation:true});
+  messaging.getContent=getContent;
+  chat=createChatService({pool,consentService:consent,messaging,liffId:'123-test',ocrService:{extract}});
+  const attachment={...event(''),message:{type:'image',id:'12345',contentProvider:{type:'line'}}};
+  await chat.accept(attachment);await chat.drain();await chat.waitForAttachments();
+  expect(lastReply()).toContain('Midterm: 40%');expect(lastReply()).toContain('check and correct');
+  expect((await detail()).scores).toEqual([]);
+  expect((await pool.query('SELECT payload FROM private_jobs WHERE event_id=$1',[attachment.webhookEventId])).rows[0].payload).toEqual({});
+  const pdf={...event(''),message:{type:'file',id:'12347',fileName:'syllabus.pdf'}};
+  await chat.accept(pdf);await chat.drain();await chat.waitForAttachments();expect(lastReply()).toContain('Final: 60%');
+  await consent.deleteData({identity:a});
+  const denied={...event(''),message:{type:'file',id:'12346'}};
+  const reminder=await chat.accept(denied);await reminder();await chat.drain();
+  expect(lastReply()).toContain('allow academic storage');expect(getContent).toHaveBeenCalledTimes(2);
+});
+test('slow attachment does not block other users and withdrawal prevents its reply',async()=>{
+  let finish,started;
+  const entered=new Promise(resolve=>{started=resolve;});
+  messaging.getContent=jest.fn().mockResolvedValue(Buffer.from('sample'));
+  chat=createChatService({pool,consentService:consent,messaging,liffId:'123-test',ocrService:{extract:()=>{started();return new Promise(resolve=>{finish=resolve;});}}});
+  const attachment={...event(''),message:{type:'image',id:'12345',contentProvider:{type:'line'}}};
+  await chat.accept(attachment);await chat.drain();await entered;
+  expect(await chat.accept(attachment)).toBeUndefined();expect(messaging.reply).not.toHaveBeenCalled();
+  const duplicate={...event(''),message:{type:'file',id:'12346'}};
+  const reminder=await chat.accept(duplicate);await reminder();expect(lastReply()).toContain('already being read');
+  await send('summary',b);expect(lastReply()).toContain('Choose a course');
+  await consent.deleteData({identity:a});
+  finish({components:[{name:'Final',weightPercent:100}],warnings:[]});await chat.waitForAttachments();
+  expect(messaging.reply.mock.calls.some(call=>call[1].includes('Syllabus draft'))).toBe(false);
+});
 test('older out-of-order message cannot change a newer draft', async () => {
   await draft('60'); const delayed = { ...event('99'), timestamp: Date.now() - 1000 };
   // Keep event eligible but explicitly older than the current conversation.

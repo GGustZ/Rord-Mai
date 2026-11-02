@@ -19,8 +19,9 @@ const start = async () => {
   try {
     await migrate(pool);
     const consentService = createConsentService({ pool, currentPolicyVersion: config.policyVersion });
+    const ocrService=createOcrService({executable:config.tesseract});
     if (config.messaging) chatService = createChatService({ pool, consentService, liffId: config.liffId,
-      messaging: createLineMessaging({ accessToken: config.messaging.accessToken }) });
+      messaging: createLineMessaging({ accessToken: config.messaging.accessToken }),ocrService });
     else console.warn('LINE chat is disabled: configure both Messaging API credentials before the presentation.');
     const app = createApp({
       pool, verifyIdentity: createLineVerifier({ channelId: config.channelId }),
@@ -28,7 +29,7 @@ const start = async () => {
       lineWebhook: chatService ? { secret: config.messaging.channelSecret, chatService } : null,
       publicConfig: { liffId: config.liffId, policyVersion: config.policyVersion },
       generateText:config.gemini?createGemini(config.gemini):null,
-      ocrService:createOcrService({executable:config.tesseract}),
+      ocrService,
       webRoot: path.resolve(__dirname, '../../web/dist'),
     });
     const server = app.listen(config.port, () => console.log('Rord-Mai listening on port ' + config.port));

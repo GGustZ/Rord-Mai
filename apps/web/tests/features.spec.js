@@ -24,8 +24,8 @@ test('GPAX profile, comparison, repeat rejection and Thai template work through 
 test('PNG syllabus is reviewed and confirmed without writing until final section creation',async({page},info)=>{
   await login(page,'browser-ocr-'+info.project.name);await startCreate(page);await page.getByRole('button',{name:'Continue',exact:true}).click();
   const image=await sharp({create:{width:50,height:50,channels:3,background:'white'}}).png().toBuffer();
-  await page.getByRole('button',{name:'Upload Syllabus Image',exact:true}).click();
-  await page.getByLabel('Syllabus Image',{exact:true}).setInputFiles({name:'syllabus.png',mimeType:'image/png',buffer:image});
+  await page.getByRole('button',{name:'Upload Syllabus',exact:true}).click();
+  await page.getByLabel('Syllabus File',{exact:true}).setInputFiles({name:'syllabus.png',mimeType:'image/png',buffer:image});
   await expect(page.getByText('Total Extracted Weight: 100%',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Confirm & Continue'})).toBeDisabled();
   const count=await page.evaluate(async token=>{
@@ -39,11 +39,12 @@ test('PNG syllabus is reviewed and confirmed without writing until final section
   await page.screenshot({path:info.outputPath('ocr-confirmed-course.png'),fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
-test('PDF uploads are refused and external consent can be toggled without losing storage',async({page},info)=>{
+test('PDF uploads reach review and external consent can be toggled without losing storage',async({page},info)=>{
   await login(page,'browser-feature-consent-'+info.project.name);await startCreate(page);await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await page.getByRole('button',{name:'Upload Syllabus Image',exact:true}).click();
-  await page.getByLabel('Syllabus Image',{exact:true}).setInputFiles({name:'syllabus.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4')});
-  await expect(page.getByRole('alert')).toContainText('PDF is not supported');
+  await page.getByRole('button',{name:'Upload Syllabus',exact:true}).click();
+  await page.route('**/api/v1/ocr/syllabus',route=>route.fulfill({json:{data:{components:[{name:'Final',weightPercent:100,maximumScore:100,inputType:'marks'}],warnings:[],requiresConfirmation:true}}}));
+  await page.getByLabel('Syllabus File',{exact:true}).setInputFiles({name:'syllabus.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4')});
+  await expect(page.getByText('Total Extracted Weight: 100%',{exact:true})).toBeVisible();
   await page.getByRole('navigation').getByRole('button',{name:'Help & Settings',exact:true}).click();
   const choice=page.getByRole('checkbox',{name:'Allow external processing of calculated values for explanations'});
   await expect(choice).not.toBeChecked();await choice.check();await expect(choice).toBeChecked();await expect(choice).toBeEnabled();
